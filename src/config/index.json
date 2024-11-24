@@ -1,0 +1,42 @@
+{
+  "company": {
+    "name": "Ray tracing"
+  },
+  "about": {
+    "sections": [
+      {
+        "name": "Тестовая сцена",
+        "href": "/geometry/playground"
+      },
+      {
+        "name": "Сцена со сферой",
+        "href": "/geometry/raycasting/sphere"
+      },
+      {
+        "name": "Сцена с треугольником",
+        "href": "/geometry/raycasting/triangle"
+      },
+      {
+        "name": "Нативная сцена",
+        "href": "/geometry/raycasting/native"
+      },
+      {
+        "name": "Основная сцена",
+        "href": "/geometry/raycasting/architecture"
+      },
+      {
+        "name": "Расширенная сцена",
+        "href": "/geometry/raycasting/template"
+      },
+      {
+        "name": "Сцена со сферой трассировкой пути",
+        "href": "/geometry/pathtracing/sphere"
+      }
+    ],
+    "socialMedia": {
+      "github": "https://github.com/0xACAB",
+      "linkedin": "https://www.linkedin.com/in/xtranscendence/",
+      "telegram": "https://t.me/xTranscendence"
+    }
+  }
+}
