@@ -43,6 +43,7 @@ export default function Sphere() {
 				currentResolutionIndex,
 			);
 
+
 			const geometry = new THREE.PlaneGeometry(2.0, 2.0);
 			material = new THREE.MeshBasicMaterial();
 			material.map = new THREE.CanvasTexture(pixelating.canvas);
@@ -168,7 +169,11 @@ export default function Sphere() {
 				stats.update();
 			};
 
-			renderer.setAnimationLoop(animate);
+			const renderPromise = pixelating.initialize();
+			renderPromise.then((render:any)=>{
+				render();
+				renderer.setAnimationLoop(animate);
+			})
 
 			return () => {
 				if (pixelating) {

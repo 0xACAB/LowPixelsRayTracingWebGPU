@@ -3,10 +3,11 @@ import { resolution } from '@/components/interfaces';
 
 export default class Pixelating {
 	canvas: HTMLCanvasElement;
-	private readonly context: WebGL2RenderingContext;
+	private context: any;
 	private readonly shaders: { vert: string; frag: string; uniforms: any };
 	private readonly program: WebGLProgram | null | undefined;
 	private readonly resolutions: Array<resolution>;
+	private currentResolution: number;
 
 	constructor(
 		canvas: HTMLCanvasElement,
@@ -17,101 +18,90 @@ export default class Pixelating {
 		this.canvas = canvas;
 		this.shaders = shaders;
 		this.resolutions = resolutions;
-		const context = this.context = canvas.getContext('webgl2')!;
+		this.currentResolution = defaultResolution;
 
-		const fragmentShader = this.getShader(context.FRAGMENT_SHADER, shaders.frag);
-		const vertexShader = this.getShader(context.VERTEX_SHADER, shaders.vert);
-		const program = this.program = context.createProgram();
-		if (program && vertexShader && fragmentShader) {
-			context.attachShader(program, vertexShader);
-			context.attachShader(program, fragmentShader);
-			context.linkProgram(program);
-
-			if (!context.getProgramParameter(program, context.LINK_STATUS)) {
-				context.deleteProgram(program);
-				console.log('ERROR linking program!', context.getProgramInfoLog(program));
-				throw 'Не удалось установить шейдеры';
-			} else {
-				Object.assign(canvas, resolutions[defaultResolution]);
-				context.viewport(0, 0, canvas.width, canvas.height);
-
-				const positionBuffer = context.createBuffer();
-				context.bindBuffer(context.ARRAY_BUFFER, positionBuffer);
-				context.bufferData(
-					context.ARRAY_BUFFER,
-					new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
-					context.STATIC_DRAW,
-				);
-
-				// provide texture coordinates for the rectangle.
-				const texcoordBuffer = context.createBuffer();
-				context.bindBuffer(context.ARRAY_BUFFER, texcoordBuffer);
-				// Set Texcoords.
-				context.bufferData(
-					context.ARRAY_BUFFER,
-					new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]),
-					context.STATIC_DRAW,
-				);
-
-				//attributes
-				const positionLocation = context.getAttribLocation(program, 'a_position');
-				const texcoordLocation = context.getAttribLocation(program, 'a_texcoord');
-
-				// Tell it to use our program (pair of shaders)
-				context.useProgram(program);
-				context.enableVertexAttribArray(positionLocation);
-				context.bindBuffer(context.ARRAY_BUFFER, positionBuffer);
-				context.vertexAttribPointer(positionLocation, 2, context.FLOAT, false, 0, 0);
-
-				context.enableVertexAttribArray(texcoordLocation);
-				context.bindBuffer(context.ARRAY_BUFFER, texcoordBuffer);
-				context.vertexAttribPointer(texcoordLocation, 2, context.FLOAT, false, 0, 0);
-
-				// Create a texture to render to
-				const targetTexture = context.createTexture();
-				context.bindTexture(context.TEXTURE_2D, targetTexture);
-
-				// Create and bind the framebuffer
-				context.bindFramebuffer(context.FRAMEBUFFER, context.createFramebuffer());
-				context.framebufferTexture2D(
-					context.FRAMEBUFFER,
-					context.COLOR_ATTACHMENT0,
-					context.TEXTURE_2D,
-					targetTexture,
-					0,
-				);
-
-				// render to the canvas
-				context.bindFramebuffer(context.FRAMEBUFFER, null);
-
-				//uniforms
-				this.recursiveSetUniforms(
-					undefined,
-					{
-						...shaders.uniforms,
-						iScaleWidth: { type: 'uniform1f', data: resolutions[defaultResolution].width },
-						iScaleHeight: { type: 'uniform1f', data: resolutions[defaultResolution].height },
-					});
-			}
-		}
 	}
 
-	private getShader(type: GLenum, shaderCode: string) {
-		const context = this.context;
-		const shader = context.createShader(type);
-		if (shader) {
-			context.shaderSource(shader, shaderCode);
-			context.compileShader(shader);
-			if (!context.getShaderParameter(shader, context.COMPILE_STATUS)) {
-				console.log('Ошибка компиляции шейдера: ' + context.getShaderInfoLog(shader));
-				context.deleteShader(shader);
-				return null;
-			}
-			return shader;
-		} else {
-			return null;
+	async initialize() {
+		const adapter = await navigator.gpu?.requestAdapter();
+		const device = await adapter?.requestDevice();
+
+		if (!device) {
+			throw 'need a browser that supports WebGPU';
 		}
-	};
+		const context = this.context = this.canvas.getContext('webgpu')!;
+		const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+		context.configure({
+			device,
+			format: presentationFormat,
+		});
+
+		const module = device.createShaderModule({
+			label: 'our hardcoded red triangle shaders',
+			code: `
+				  @vertex fn vs(
+				    @builtin(vertex_index) vertexIndex : u32
+				  ) -> @builtin(position) vec4f {
+				    let pos = array(
+				      vec2f( 0.0,  0.5),  // top center
+				      vec2f(-0.5, -0.5),  // bottom left
+				      vec2f( 0.5, -0.5)   // bottom right
+				    );
+				
+				    return vec4f(pos[vertexIndex], 0.0, 1.0);
+				  }
+				
+				  @fragment fn fs() -> @location(0) vec4f {
+				    return vec4f(1, 0, 0, 1);
+				  }
+				`,
+		});
+
+		const pipeline = device.createRenderPipeline({
+			label: 'our hardcoded red triangle pipeline',
+			layout: 'auto',
+			vertex: {
+				module,
+			},
+			fragment: {
+				module,
+				targets: [{ format: presentationFormat }],
+			},
+		});
+
+		const renderPassDescriptor: any = {
+			label: 'our basic canvas renderPass',
+			colorAttachments: [
+				{
+					// view: <- to be filled out when we render
+					clearValue: [0.3, 0.3, 0.3, 1],
+					loadOp: 'clear',
+					storeOp: 'store',
+				},
+			],
+		};
+
+		function render() {
+			// Get the current texture from the canvas context and
+			// set it as the texture to render to.
+			renderPassDescriptor.colorAttachments[0].view =
+				context.getCurrentTexture().createView();
+
+			const encoder = device!.createCommandEncoder({ label: 'our encoder' });
+			const pass = encoder.beginRenderPass(renderPassDescriptor);
+			pass.setPipeline(pipeline);
+			pass.draw(3);  // call our vertex shader 3 times
+			pass.end();
+
+			const commandBuffer = encoder.finish();
+			device!.queue.submit([commandBuffer]);
+		}
+
+		Object.assign(this.canvas, this.resolutions[this.currentResolution]);
+		return new Promise((resolve) => {
+			return resolve(render);
+		});
+	}
 
 	private recursiveSetUniforms = (prefix: string | undefined, subUniforms: any) => {
 		const program = this.program;
@@ -169,6 +159,11 @@ export default class Pixelating {
 			context.uniform1f(iScaleWidth, resolution.width);
 			context.uniform1f(iScaleHeight, resolution.height);
 			context.drawArrays(context.TRIANGLES, 0, 6);
+		} else {
+			//TODO
+			const valueAsNumber = event.target.valueAsNumber;
+			Object.assign(this.canvas, this.resolutions[valueAsNumber]);
+
 		}
 	}
 
