@@ -18,8 +18,8 @@ const nextConfig = {
 	webpack: (config) => {
 		config.module.rules.push(
 			{
-				test: /\.(glsl|vs|fs)$/,
-				loader: 'ts-shader-loader',
+				test: /\.(glsl|wgsl|vs|fs)$/,
+				loader: 'raw-loader',
 			});
 
 		return config;

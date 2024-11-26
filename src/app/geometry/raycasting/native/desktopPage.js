@@ -8,7 +8,7 @@ import Link from 'next/link';
 import Slider from '@/components/Pixelating/Slider';
 
 function DesktopPage() {
-	const pixelatingCanvasRef = useRef<HTMLCanvasElement>(null);
+	const pixelatingCanvasRef = useRef(null);
 
 	const resolutions = [
 		{ width: 8, height: 8 },
@@ -21,7 +21,7 @@ function DesktopPage() {
 	];
 	let currentResolutionIndex = 1;
 
-	let pixelating: Pixelating;
+	let pixelating;
 	useEffect(() => {
 		if (pixelatingCanvasRef.current) {
 			//Create controller for plane CanvasTexture
@@ -32,13 +32,13 @@ function DesktopPage() {
 				currentResolutionIndex,
 			);
 
-			const pointerDown = (event: MouseEvent) => {
+			const pointerDown = (event) => {
 				console.log(event.offsetX, event.offsetY);
 			};
 			pixelatingCanvasRef.current.addEventListener('pointerdown', pointerDown);
 
-			let animationId: number;
-			const render = (time: number) => {
+			let animationId;
+			const render = (time) => {
 				// convert to seconds
 				time *= 0.001;
 				if (pixelating) {
@@ -57,7 +57,7 @@ function DesktopPage() {
 			};
 		}
 	});
-	const onChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+	const onChange = (event) => {
 		if (pixelating) {
 			pixelating.onChange(event);
 		}

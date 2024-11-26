@@ -10,8 +10,8 @@ import Pixelating from '@/components/Pixelating/Pixelating';
 import Slider from '@/components/Pixelating/Slider';
 
 export default function Scene() {
-	const canvasRef = useRef<HTMLCanvasElement>(null);
-	const pixelatingCanvasRef = useRef<HTMLCanvasElement>(null);
+	const canvasRef = useRef(null);
+	const pixelatingCanvasRef = useRef(null);
 	const resolutions = [
 		{ width: 8, height: 8 },
 		{ width: 16, height: 16 },
@@ -23,8 +23,8 @@ export default function Scene() {
 	];
 	let currentResolutionIndex = 1;
 
-	let material: THREE.MeshBasicMaterial;
-	let pixelating: Pixelating;
+	let material;
+	let pixelating;
 	useEffect(() => {
 		if (canvasRef.current && pixelatingCanvasRef.current) {
 
@@ -56,7 +56,7 @@ export default function Scene() {
 
 			const pointer = new THREE.Vector2(-999, -999);
 			const rayCaster = new THREE.Raycaster();
-			const pointerDown = (event: MouseEvent) => {
+			const pointerDown = (event) => {
 				// calculate pointer position in normalized device coordinates
 				// (-1 to +1) for both components
 				const rect = canvas.getBoundingClientRect();
@@ -77,10 +77,10 @@ export default function Scene() {
 			};
 			canvas.addEventListener('pointerdown', pointerDown);
 
-			const renderer: THREE.WebGLRenderer = new THREE.WebGLRenderer({ canvas });
+			const renderer = new THREE.WebGLRenderer({ canvas });
 			renderer.setSize(width, height);
 			//group.rotation.y = Math.PI/4;
-			const animate = (time: number) => {
+			const animate = (time) => {
 				//convert to seconds
 				time *= 0.001;
 				if (pixelating && material.map) {
@@ -101,7 +101,7 @@ export default function Scene() {
 		}
 	}, []);
 
-	const onChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+	const onChange = (event) => {
 		if (pixelating && material.map) {
 			currentResolutionIndex = event.target.valueAsNumber;
 			uniforms.iMouse.data = [-999, -999];

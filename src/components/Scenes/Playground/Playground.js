@@ -4,12 +4,12 @@ import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
 export default function Playground() {
-	const canvasRef = useRef<HTMLCanvasElement>(null);
+	const canvasRef = useRef(null);
 	useEffect(() => {
 		// Initialize the WebGL renderer if it doesn't already exist
 		if (canvasRef.current) {
 			const canvas = canvasRef.current;
-			const renderer: THREE.WebGLRenderer = new THREE.WebGLRenderer({ canvas });
+			const renderer = new THREE.WebGLRenderer({ canvas });
 
 			// Basic Three.js scene setup
 			const scene = new THREE.Scene();

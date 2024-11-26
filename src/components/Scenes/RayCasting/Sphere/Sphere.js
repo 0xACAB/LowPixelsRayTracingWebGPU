@@ -11,9 +11,9 @@ import Pixelating from '@/components/Pixelating/Pixelating';
 import Slider from '@/components/Pixelating/Slider';
 
 export default function Sphere() {
-	const statsRef = useRef<HTMLDivElement>(null);
-	const canvasRef = useRef<HTMLCanvasElement>(null);
-	const pixelatingCanvasRef = useRef<HTMLCanvasElement>(null);
+	const statsRef = useRef(null);
+	const canvasRef = useRef(null);
+	const pixelatingCanvasRef = useRef(null);
 	const resolutions = [
 		{ width: 8, height: 8 },
 		{ width: 16, height: 16 },
@@ -25,8 +25,8 @@ export default function Sphere() {
 	];
 	let currentResolutionIndex = 1;
 
-	let material: THREE.MeshBasicMaterial;
-	let pixelating: Pixelating;
+	let material;
+	let pixelating;
 	useEffect(() => {
 		if (canvasRef.current && pixelatingCanvasRef.current) {
 			//Create Stats for fps info
@@ -63,7 +63,7 @@ export default function Sphere() {
 			const lineMaterial2 = new THREE.LineBasicMaterial({ color: 0x00FF00 });
 			const lineGeometry2 = new THREE.BufferGeometry();
 			const line2 = new THREE.Line(lineGeometry2, lineMaterial2);
-			const pointsL2: Array<THREE.Vector3> = [
+			const pointsL2 = [
 				new THREE.Vector3(0, 0, 1),
 			];
 
@@ -96,7 +96,7 @@ export default function Sphere() {
 
 			const pointer = new THREE.Vector2(-999, -999);
 			const rayCaster = new THREE.Raycaster();
-			const pointerDown = (event: MouseEvent) => {
+			const pointerDown = (event) => {
 				// calculate pointer position in normalized device coordinates
 				// (-1 to +1) for both components
 				const rect = canvas.getBoundingClientRect();
@@ -129,10 +129,10 @@ export default function Sphere() {
 			};
 			canvas.addEventListener('pointerdown', pointerDown);
 
-			const renderer: THREE.WebGLRenderer = new THREE.WebGLRenderer({ canvas });
+			const renderer = new THREE.WebGLRenderer({ canvas });
 			renderer.setSize(width, height);
 			//group.rotation.y = Math.PI / 4;
-			const animate = (time: number) => {
+			const animate = (time) => {
 				//convert to seconds
 				time *= 0.001;
 				group.rotation.y -= 0.005;
@@ -144,7 +144,7 @@ export default function Sphere() {
 
 				if (pixelating && material.map) {
 					material.map.needsUpdate = true;
-					pixelating.render(time, (context: WebGL2RenderingContext, program: WebGLProgram) => {
+					pixelating.render(time, (context, program) => {
 
 						const spherePosition = uniforms.sphere.data.position.data;
 						spherePosition[0] = Math.cos(time);
@@ -170,7 +170,7 @@ export default function Sphere() {
 			};
 
 			const renderPromise = pixelating.initialize();
-			renderPromise.then((render:any)=>{
+			renderPromise.then((render)=>{
 				render();
 				renderer.setAnimationLoop(animate);
 			})
@@ -185,7 +185,7 @@ export default function Sphere() {
 		}
 	}, []);
 
-	const onChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+	const onChange = (event) => {
 		if (pixelating && material.map) {
 			currentResolutionIndex = event.target.valueAsNumber;
 			uniforms.iMouse.data = [-999, -999];

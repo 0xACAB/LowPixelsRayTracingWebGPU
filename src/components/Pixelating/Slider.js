@@ -1,15 +1,10 @@
 import React, { useState } from 'react';
-import { resolution } from '@/components/interfaces';
 
 export default function Slider(
 	{
 		onChange,
 		resolutions,
 		defaultResolution = 0,
-	}: {
-		onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-		resolutions: Array<resolution>;
-		defaultResolution?: number,
 	}) {
 	const [state, setState] = useState(defaultResolution);
 	return (

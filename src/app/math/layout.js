@@ -7,8 +7,6 @@ export const metadata = {
 
 export default async function MathLayout({
 	children,
-}: {
-	children: React.ReactNode
 }) {
 	return (
 		<html lang="en">

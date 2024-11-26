@@ -1,18 +1,8 @@
-import React from 'react';
-import { resolution } from '@/components/interfaces';
-
 export default class Pixelating {
-	canvas: HTMLCanvasElement;
-	private context: any;
-	private readonly shaders: { vert: string; frag: string; uniforms: any };
-	private readonly program: WebGLProgram | null | undefined;
-	private readonly resolutions: Array<resolution>;
-	private currentResolution: number;
-
 	constructor(
-		canvas: HTMLCanvasElement,
-		shaders: { vert: string, frag: string, uniforms: any },
-		resolutions: Array<resolution>,
+		canvas,
+		shaders,
+		resolutions,
 		defaultResolution = 0,
 	) {
 		this.canvas = canvas;
@@ -29,7 +19,7 @@ export default class Pixelating {
 		if (!device) {
 			throw 'need a browser that supports WebGPU';
 		}
-		const context = this.context = this.canvas.getContext('webgpu')!;
+		const context = this.context = this.canvas.getContext('webgpu');
 		const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 		context.configure({
 			device,
@@ -69,7 +59,7 @@ export default class Pixelating {
 			},
 		});
 
-		const renderPassDescriptor: any = {
+		const renderPassDescriptor = {
 			label: 'our basic canvas renderPass',
 			colorAttachments: [
 				{
@@ -87,14 +77,14 @@ export default class Pixelating {
 			renderPassDescriptor.colorAttachments[0].view =
 				context.getCurrentTexture().createView();
 
-			const encoder = device!.createCommandEncoder({ label: 'our encoder' });
+			const encoder = device.createCommandEncoder({ label: 'our encoder' });
 			const pass = encoder.beginRenderPass(renderPassDescriptor);
 			pass.setPipeline(pipeline);
 			pass.draw(3);  // call our vertex shader 3 times
 			pass.end();
 
 			const commandBuffer = encoder.finish();
-			device!.queue.submit([commandBuffer]);
+			device.queue.submit([commandBuffer]);
 		}
 
 		Object.assign(this.canvas, this.resolutions[this.currentResolution]);
@@ -103,7 +93,7 @@ export default class Pixelating {
 		});
 	}
 
-	private recursiveSetUniforms = (prefix: string | undefined, subUniforms: any) => {
+	recursiveSetUniforms = (prefix, subUniforms) => {
 		const program = this.program;
 		if (program) {
 			const context = this.context;
@@ -113,8 +103,7 @@ export default class Pixelating {
 					const uniform = subUniforms[uniformName];
 					const uniformLocation =
 						context.getUniformLocation(program, prefix ? prefix + uniformName : uniformName);
-					const setUniformFunction =
-						(context[uniform.type as keyof typeof context] as any).bind(context);
+					const setUniformFunction = context[uniform.type].bind(context);
 					setUniformFunction(uniformLocation, uniform.data);
 				} else {
 
@@ -125,7 +114,7 @@ export default class Pixelating {
 		}
 	};
 
-	render(time: number, callback?: any) {
+	render(time, callback) {
 		const program = this.program;
 		if (program) {
 			const context = this.context;
@@ -143,7 +132,7 @@ export default class Pixelating {
 		}
 	}
 
-	onChange(event: React.ChangeEvent<HTMLInputElement>) {
+	onChange(event) {
 		const program = this.program;
 		if (program) {
 			const canvas = this.canvas;
@@ -168,6 +157,6 @@ export default class Pixelating {
 	}
 
 	unmount() {
-		this.context.getExtension('WEBGL_lose_context')?.loseContext();
+		this.context.unconfigure();
 	}
 }

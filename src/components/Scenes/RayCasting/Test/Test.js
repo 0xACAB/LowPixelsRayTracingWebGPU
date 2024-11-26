@@ -10,10 +10,10 @@ import uniforms from './uniforms';
 import Pixelating from '@/components/Pixelating/Pixelating';
 import Slider from '@/components/Pixelating/Slider';
 
-export default function Triangle() {
-	const statsRef = useRef<HTMLDivElement>(null);
-	const canvasRef = useRef<HTMLCanvasElement>(null);
-	const pixelatingCanvasRef = useRef<HTMLCanvasElement>(null);
+export default function Test() {
+	const statsRef = useRef(null);
+	const canvasRef = useRef(null);
+	const pixelatingCanvasRef = useRef(null);
 	const resolutions = [
 		{ width: 8, height: 8 },
 		{ width: 16, height: 16 },
@@ -25,10 +25,11 @@ export default function Triangle() {
 	];
 	let currentResolutionIndex = 1;
 
-	let material: THREE.MeshBasicMaterial;
-	let pixelating: Pixelating;
+	let material;
+	let pixelating;
 	useEffect(() => {
 		if (canvasRef.current && pixelatingCanvasRef.current) {
+			//Create Stats for fps info
 			const stats = new Stats();
 			if (statsRef.current) {
 				statsRef.current.appendChild(stats.dom);
@@ -52,19 +53,10 @@ export default function Triangle() {
 
 			const plane = new THREE.Mesh(geometry, material);
 
-			const triangleGeometry = new THREE.BufferGeometry();
-			const vertices = new Float32Array(uniforms.trianglePoints.data);
-			const indices = uniforms.indicesData.data;
-			triangleGeometry.setIndex(indices);
-			triangleGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-			const triangleMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-			const triangle = new THREE.Mesh(triangleGeometry, triangleMaterial);
-			triangle.material.side = THREE.DoubleSide;
-
 			const lineMaterial2 = new THREE.LineBasicMaterial({ color: 0x00FF00 });
 			const lineGeometry2 = new THREE.BufferGeometry();
 			const line2 = new THREE.Line(lineGeometry2, lineMaterial2);
-			const pointsL2: Array<THREE.Vector3> = [
+			const pointsL2 = [
 				new THREE.Vector3(0, 0, 1),
 			];
 
@@ -83,7 +75,6 @@ export default function Triangle() {
 
 			const group = new THREE.Group();
 			group.add(plane);
-			group.add(triangle);
 			group.add(line2);
 
 			const scene = new THREE.Scene();
@@ -92,7 +83,7 @@ export default function Triangle() {
 
 			const pointer = new THREE.Vector2(-999, -999);
 			const rayCaster = new THREE.Raycaster();
-			const pointerDown = (event: MouseEvent) => {
+			const pointerDown = (event) => {
 				// calculate pointer position in normalized device coordinates
 				// (-1 to +1) for both components
 				const rect = canvas.getBoundingClientRect();
@@ -125,10 +116,10 @@ export default function Triangle() {
 			};
 			canvas.addEventListener('pointerdown', pointerDown);
 
-			const renderer: THREE.WebGLRenderer = new THREE.WebGLRenderer({ canvas });
+			const renderer = new THREE.WebGLRenderer({ canvas });
 			renderer.setSize(width, height);
-			//group.rotation.y = Math.PI / 4;
-			const animate = (time: number) => {
+			//group.rotation.y = Math.PI/4;
+			const animate = (time) => {
 				//convert to seconds
 				time *= 0.001;
 				group.rotation.y -= 0.005;
@@ -158,7 +149,7 @@ export default function Triangle() {
 		}
 	}, []);
 
-	const onChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+	const onChange = (event) => {
 		if (pixelating && material.map) {
 			currentResolutionIndex = event.target.valueAsNumber;
 			uniforms.iMouse.data = [-999, -999];
