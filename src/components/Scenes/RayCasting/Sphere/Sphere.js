@@ -3,8 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import Stats from 'three/addons/libs/stats.module.js';
 
-import vert from './shaders/vert.glsl';
-import frag from './shaders/frag.glsl';
+import shaderCode from './shaders/shader.wgsl';
 import uniforms from './uniforms';
 
 import Pixelating from '@/components/Pixelating/Pixelating';
@@ -38,11 +37,10 @@ export default function Sphere() {
 			//Create controller for plane CanvasTexture
 			pixelating = new Pixelating(
 				pixelatingCanvasRef.current,
-				{ vert, frag, uniforms },
+				{ code: shaderCode, uniforms },
 				resolutions,
 				currentResolutionIndex,
 			);
-
 
 			const geometry = new THREE.PlaneGeometry(2.0, 2.0);
 			material = new THREE.MeshBasicMaterial();
@@ -151,18 +149,18 @@ export default function Sphere() {
 						spherePosition[1] = -Math.sin(time);
 						sphere.position.setX(spherePosition[0]);
 						sphere.position.setY(spherePosition[1]);
-						const spherePositionUniformLocation =
-							context.getUniformLocation(program, 'sphere.position');
-						context.uniform3fv(spherePositionUniformLocation, uniforms.sphere.data.position.data);
+						//const spherePositionUniformLocation =
+						//context.getUniformLocation(program, 'sphere.position');
+						//context.uniform3fv(spherePositionUniformLocation, uniforms.sphere.data.position.data);
 
 						const lightPosition = uniforms.lightSphere.data.position.data;
 						lightPosition[0] = 2.0 * Math.cos(time);
 						lightPosition[1] = 2.0 * Math.sin(time);
 						light.position.setX(lightPosition[0]);
 						light.position.setY(lightPosition[1]);
-						const lightSpherePositionUniformLocation =
-							context.getUniformLocation(program, 'lightSphere.position');
-						context.uniform3fv(lightSpherePositionUniformLocation, uniforms.lightSphere.data.position.data);
+						//const lightSpherePositionUniformLocation =
+						//context.getUniformLocation(program, 'lightSphere.position');
+						//context.uniform3fv(lightSpherePositionUniformLocation, uniforms.lightSphere.data.position.data);
 					});
 				}
 				renderer.render(scene, camera);
@@ -170,19 +168,23 @@ export default function Sphere() {
 			};
 
 			const renderPromise = pixelating.initialize();
-			renderPromise.then((render)=>{
-				render();
-				renderer.setAnimationLoop(animate);
-			})
+			renderPromise.then(
+				(render) => {
+					render();
+					renderer.setAnimationLoop(animate);
+				},
+				(error) => {
+					throw error;
+				},
+			);
 
 			return () => {
-				if (pixelating) {
-					pixelating.unmount();
-				}
+				pixelating.unmount();
 				renderer.setAnimationLoop(null);
 				renderer.forceContextLoss();
 			};
 		}
+		//TODO in useEffect warning Fast Refresh had to perform a full reload due to a runtime error.
 	}, []);
 
 	const onChange = (event) => {
