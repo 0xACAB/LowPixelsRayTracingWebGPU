@@ -13,7 +13,6 @@ export default class Pixelating {
 	}
 
 	async initialize() {
-
 		return new Promise(async (resolve, reject) => {
 			const adapter = await navigator.gpu?.requestAdapter();
 			const device = await adapter?.requestDevice();
@@ -44,7 +43,18 @@ export default class Pixelating {
 					targets: [{ format: presentationFormat }],
 				},
 			});
-
+			const uniformBufferSize = 4;
+			const uniformBuffer = device.createBuffer({
+				size: uniformBufferSize,
+				usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+			});
+			const bindGroup = device.createBindGroup({
+				label: 'triangle bind group',
+				layout: pipeline.getBindGroupLayout(0),
+				entries: [
+					{ binding: 0, resource: { buffer: uniformBuffer } },
+				],
+			});
 			const renderPassDescriptor = {
 				label: 'our basic canvas renderPass',
 				colorAttachments: [
@@ -56,17 +66,28 @@ export default class Pixelating {
 					},
 				],
 			};
+			const uniformData = new Float32Array([0]);
 
-			function render() {
+			function render(time) {
 				// Get the current texture from the canvas context and
 				// set it as the texture to render to.
 				renderPassDescriptor.colorAttachments[0].view =
 					context.getCurrentTexture().createView();
+				// copy the values from JavaScript to the GPU
+				uniformData[0] = time;
+				device.queue.writeBuffer(
+					uniformBuffer,
+					0,
+					uniformData.buffer,
+					uniformData.byteOffset,
+					uniformData.byteLength,
+				);
 
 				const encoder = device.createCommandEncoder({ label: 'our encoder' });
 				const pass = encoder.beginRenderPass(renderPassDescriptor);
 				pass.setPipeline(pipeline);
-				pass.draw(3);  // call our vertex shader 3 times
+				pass.setBindGroup(0, bindGroup);
+				pass.draw(6);  // call our vertex shader 3 times
 				pass.end();
 
 				const commandBuffer = encoder.finish();

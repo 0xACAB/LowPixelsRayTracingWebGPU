@@ -34,21 +34,14 @@ export default function Sphere() {
 				statsRef.current.appendChild(stats.dom);
 			}
 
-			//Create controller for plane CanvasTexture
-			pixelating = new Pixelating(
-				pixelatingCanvasRef.current,
-				{ code: shaderCode, uniforms },
-				resolutions,
-				currentResolutionIndex,
-			);
 
 			const geometry = new THREE.PlaneGeometry(2.0, 2.0);
 			material = new THREE.MeshBasicMaterial();
-			material.map = new THREE.CanvasTexture(pixelating.canvas);
+			material.map = new THREE.CanvasTexture(pixelatingCanvasRef.current);
 			material.map.magFilter = THREE.NearestFilter;
 			material.side = THREE.DoubleSide;
 			material.transparent = true;
-			material.opacity = 0.4;
+			material.opacity = 1;
 
 			const plane = new THREE.Mesh(geometry, material);
 
@@ -127,50 +120,56 @@ export default function Sphere() {
 			};
 			canvas.addEventListener('pointerdown', pointerDown);
 
+			//Create controller for plane CanvasTexture
+			pixelating = new Pixelating(
+				pixelatingCanvasRef.current,
+				{ code: shaderCode, uniforms },
+				resolutions,
+				currentResolutionIndex,
+			);
+			const pixelatingRenderPromise = pixelating.initialize();
 			const renderer = new THREE.WebGLRenderer({ canvas });
 			renderer.setSize(width, height);
-			//group.rotation.y = Math.PI / 4;
-			const animate = (time) => {
-				//convert to seconds
-				time *= 0.001;
-				group.rotation.y -= 0.005;
-
-				cameraPerspective.position.x = -Math.cos(group.rotation.y + Math.PI / 2);
-				cameraPerspective.position.z = Math.sin(group.rotation.y + Math.PI / 2);
-				cameraPerspective.lookAt(plane.position);
-				cameraPerspective.updateProjectionMatrix();
-
-				if (pixelating && material.map) {
-					material.map.needsUpdate = true;
-					pixelating.render(time, (context, program) => {
-
-						const spherePosition = uniforms.sphere.data.position.data;
-						spherePosition[0] = Math.cos(time);
-						spherePosition[1] = -Math.sin(time);
-						sphere.position.setX(spherePosition[0]);
-						sphere.position.setY(spherePosition[1]);
-						//const spherePositionUniformLocation =
-						//context.getUniformLocation(program, 'sphere.position');
-						//context.uniform3fv(spherePositionUniformLocation, uniforms.sphere.data.position.data);
-
-						const lightPosition = uniforms.lightSphere.data.position.data;
-						lightPosition[0] = 2.0 * Math.cos(time);
-						lightPosition[1] = 2.0 * Math.sin(time);
-						light.position.setX(lightPosition[0]);
-						light.position.setY(lightPosition[1]);
-						//const lightSpherePositionUniformLocation =
-						//context.getUniformLocation(program, 'lightSphere.position');
-						//context.uniform3fv(lightSpherePositionUniformLocation, uniforms.lightSphere.data.position.data);
-					});
-				}
-				renderer.render(scene, camera);
-				stats.update();
-			};
-
-			const renderPromise = pixelating.initialize();
-			renderPromise.then(
+			pixelatingRenderPromise.then(
 				(render) => {
-					render();
+					//group.rotation.y = Math.PI / 4;
+					const animate = (time) => {
+						//convert to seconds
+						time *= 0.001;
+						group.rotation.y -= 0.005;
+
+						cameraPerspective.position.x = -Math.cos(group.rotation.y + Math.PI / 2);
+						cameraPerspective.position.z = Math.sin(group.rotation.y + Math.PI / 2);
+						cameraPerspective.lookAt(plane.position);
+						cameraPerspective.updateProjectionMatrix();
+						if (material.map) {
+							material.map.needsUpdate = true;
+							render(time);
+							/*pixelating.render(time, (context, program) => {
+
+								const spherePosition = uniforms.sphere.data.position.data;
+								spherePosition[0] = Math.cos(time);
+								spherePosition[1] = -Math.sin(time);
+								sphere.position.setX(spherePosition[0]);
+								sphere.position.setY(spherePosition[1]);
+								//const spherePositionUniformLocation =
+								//context.getUniformLocation(program, 'sphere.position');
+								//context.uniform3fv(spherePositionUniformLocation, uniforms.sphere.data.position.data);
+
+								const lightPosition = uniforms.lightSphere.data.position.data;
+								lightPosition[0] = 2.0 * Math.cos(time);
+								lightPosition[1] = 2.0 * Math.sin(time);
+								light.position.setX(lightPosition[0]);
+								light.position.setY(lightPosition[1]);
+								//const lightSpherePositionUniformLocation =
+								//context.getUniformLocation(program, 'lightSphere.position');
+								//context.uniform3fv(lightSpherePositionUniformLocation, uniforms.lightSphere.data.position.data);
+							});*/
+						}
+						renderer.render(scene, camera);
+						stats.update();
+					};
+
 					renderer.setAnimationLoop(animate);
 				},
 				(error) => {

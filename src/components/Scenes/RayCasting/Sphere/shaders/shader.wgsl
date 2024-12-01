@@ -1,26 +1,41 @@
-@vertex
-fn vs(@builtin(vertex_index) vertexIndex : u32) -> @builtin(position) vec4f {
-    let pos = array(
-        vec2f( 0.0,  0.5),  // top center
-        vec2f(-0.5, -0.5),  // bottom left
-        vec2f( 0.5, -0.5)   // bottom right
+@binding(0) @group(0) var<uniform> iTime : f32;
+struct OurVertexShaderOutput {
+    @builtin(position) position: vec4f,
+    @location(0) texcoord: vec2f
+};
+@vertex fn vs(
+    @builtin(vertex_index) vertexIndex : u32
+) -> OurVertexShaderOutput {
+    const pos = array(
+        // 1st triangle
+        vec2f( -1.0,  -1.0),  // center
+        vec2f( 1.0,  -1.0),  // right, center
+        vec2f( -1.0,  1.0),  // center, top
+
+        // 2nd triangle
+        vec2f( -1.0,  1.0),  // center, top
+        vec2f( 1.0,  -1.0),  // right, center
+        vec2f( 1.0,  1.0),  // right, top
     );
+    var vsOutput: OurVertexShaderOutput;
 
-    return vec4f(pos[vertexIndex], 0.0, 1.0);
+    let xy = pos[vertexIndex];
+    vsOutput.position = vec4f(xy, 0.0, 1.0);
+
+    vsOutput.texcoord = xy;
+    return vsOutput;
 }
 
-// A structure with three members.
 struct Pixel {
-  coordinate: vec2<f32>,
-  color: vec3<f32>
+    coordinate: vec2<f32>,
+    color: vec3<f32>
 }
 
-fn rayTrace() -> vec3<f32> {
-    return vec3f(1, 0, 0);
+fn rayTrace(fsInput: OurVertexShaderOutput) -> vec4<f32> {
+    let pixel = Pixel(fsInput.texcoord, vec3f(0,0,0));
+    return vec4f(0,cos(fsInput.texcoord.x),sin(iTime),1);
 }
-// Declare a variable storing a value of type Data.
-var<private> some_data: Pixel;
-@fragment
-fn fs() -> @location(0) vec4f {
-    return vec4f(rayTrace(), 1);
+
+@fragment fn fs(fsInput: OurVertexShaderOutput) -> @location(0) vec4<f32> {
+    return rayTrace(fsInput);
 }
