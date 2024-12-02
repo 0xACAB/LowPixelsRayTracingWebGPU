@@ -7,7 +7,7 @@ export default async function isMobileDevice() {
 	if (typeof process === 'undefined') {
 		throw new Error('[Server method] you are importing a server-only module outside of server');
 	}
-	const { get } = headers();
+	const { get } = await headers();
 	const ua = get('user-agent');
 
 	const device = new UAParser(ua || '').getDevice();

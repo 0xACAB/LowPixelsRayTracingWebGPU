@@ -30,7 +30,6 @@ struct Pixel {
     coordinate: vec2<f32>,
     color: vec3<f32>
 }
-
 fn rayTrace(fsInput: OurVertexShaderOutput) -> vec4<f32> {
     let pixel = Pixel(fsInput.texcoord, vec3f(0,0,0));
     return vec4f(0,cos(fsInput.texcoord.x),sin(iTime),1);

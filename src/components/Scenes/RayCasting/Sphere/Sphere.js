@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useRef } from 'react';
+import { useRef, useState } from 'react';
 import * as THREE from 'three';
 import Stats from 'three/addons/libs/stats.module.js';
 
@@ -8,11 +8,11 @@ import uniforms from './uniforms';
 
 import Pixelating from '@/components/Pixelating/Pixelating';
 import Slider from '@/components/Pixelating/Slider';
+import { useTwoCanvases } from '@/hooks/useTwoCanvases';
 
 export default function Sphere() {
 	const statsRef = useRef(null);
-	const canvasRef = useRef(null);
-	const pixelatingCanvasRef = useRef(null);
+
 	const resolutions = [
 		{ width: 8, height: 8 },
 		{ width: 16, height: 16 },
@@ -23,22 +23,22 @@ export default function Sphere() {
 		{ width: 512, height: 512 },
 	];
 	let currentResolutionIndex = 1;
-
-	let material;
-	let pixelating;
-	useEffect(() => {
-		if (canvasRef.current && pixelatingCanvasRef.current) {
+	const [materialState, setMaterialState] = useState(null);
+	const [pixelatingState, setPixelatingState] = useState(null);
+	const canvassesRefs = useTwoCanvases(
+		([canvas, pixelatingCanvas, pixelatingContext]) => {
 			//Create Stats for fps info
 			const stats = new Stats();
 			if (statsRef.current) {
 				statsRef.current.appendChild(stats.dom);
 			}
 
-
 			const geometry = new THREE.PlaneGeometry(2.0, 2.0);
-			material = new THREE.MeshBasicMaterial();
-			material.map = new THREE.CanvasTexture(pixelatingCanvasRef.current);
+			const material = new THREE.MeshBasicMaterial();
+			material.map = new THREE.CanvasTexture(pixelatingCanvas);
 			material.map.magFilter = THREE.NearestFilter;
+			material.map.flipY = false;
+			material.map.premultiplyAlpha = false;
 			material.side = THREE.DoubleSide;
 			material.transparent = true;
 			material.opacity = 1;
@@ -62,7 +62,6 @@ export default function Sphere() {
 			const lightPosition = uniforms.lightSphere.data.position.data;
 			light.position.set(lightPosition[0], lightPosition[1], lightPosition[2]);
 
-			const canvas = canvasRef.current;
 			const width = canvas.width;
 			const height = canvas.height;
 
@@ -83,10 +82,12 @@ export default function Sphere() {
 
 			const scene = new THREE.Scene();
 			scene.add(group);
+
 			scene.add(helper);
 
 			const pointer = new THREE.Vector2(-999, -999);
 			const rayCaster = new THREE.Raycaster();
+
 			const pointerDown = (event) => {
 				// calculate pointer position in normalized device coordinates
 				// (-1 to +1) for both components
@@ -120,18 +121,22 @@ export default function Sphere() {
 			};
 			canvas.addEventListener('pointerdown', pointerDown);
 
+
+			const renderer = new THREE.WebGLRenderer({canvas});
+			renderer.setSize(width, height);
+
 			//Create controller for plane CanvasTexture
-			pixelating = new Pixelating(
-				pixelatingCanvasRef.current,
+			const pixelating = new Pixelating(
 				{ code: shaderCode, uniforms },
 				resolutions,
 				currentResolutionIndex,
 			);
-			const pixelatingRenderPromise = pixelating.initialize();
-			const renderer = new THREE.WebGLRenderer({ canvas });
-			renderer.setSize(width, height);
+
+			const pixelatingRenderPromise = pixelating.initialize(pixelatingContext);
 			pixelatingRenderPromise.then(
 				(render) => {
+					setMaterialState(material);
+					setPixelatingState(pixelating);
 					//group.rotation.y = Math.PI / 4;
 					const animate = (time) => {
 						//convert to seconds
@@ -145,7 +150,7 @@ export default function Sphere() {
 						if (material.map) {
 							material.map.needsUpdate = true;
 							render(time);
-							/*pixelating.render(time, (context, program) => {
+							pixelating.render(time, (context, program) => {
 
 								const spherePosition = uniforms.sphere.data.position.data;
 								spherePosition[0] = Math.cos(time);
@@ -164,10 +169,11 @@ export default function Sphere() {
 								//const lightSpherePositionUniformLocation =
 								//context.getUniformLocation(program, 'lightSphere.position');
 								//context.uniform3fv(lightSpherePositionUniformLocation, uniforms.lightSphere.data.position.data);
-							});*/
+							});
 						}
 						renderer.render(scene, camera);
 						stats.update();
+
 					};
 
 					renderer.setAnimationLoop(animate);
@@ -177,28 +183,26 @@ export default function Sphere() {
 				},
 			);
 
+			// Cleanup function to dispose of WebGL resources
 			return () => {
 				pixelating.unmount();
 				renderer.setAnimationLoop(null);
-				renderer.forceContextLoss();
 			};
-		}
-		//TODO in useEffect warning Fast Refresh had to perform a full reload due to a runtime error.
-	}, []);
+		});
 
 	const onChange = (event) => {
-		if (pixelating && material.map) {
+		if (pixelatingState && materialState.map) {
 			currentResolutionIndex = event.target.valueAsNumber;
 			uniforms.iMouse.data = [-999, -999];
-			material.map.dispose();
-			pixelating.onChange(event);
+			materialState.map.dispose();
+			pixelatingState.onChange(event);
 		}
 	};
 	return (
 		<>
 			<div ref={statsRef}></div>
-			<canvas id="canvas" className={`pixelated`} width={512} height={512} ref={canvasRef}></canvas>
-			<canvas id="canvas" className={`hidden`} ref={pixelatingCanvasRef}></canvas>
+			<canvas id="canvas" className='pixelated' width={512} height={512} ref={canvassesRefs[0]}></canvas>
+			<canvas id="canvas" className='hidden' ref={canvassesRefs[1]}></canvas>
 			<Slider onChange={onChange} resolutions={resolutions} defaultResolution={currentResolutionIndex} />
 		</>
 	);
