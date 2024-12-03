@@ -1,36 +1,24 @@
 export default class Pixelating {
-	constructor(
-		shader,
-		resolutions,
-		defaultResolution = 0,
-	) {
-		this.shader = shader;
-		this.resolutions = resolutions;
-		this.currentResolution = defaultResolution;
-		this.context = null;
-
-	}
-
-	async initialize(context) {
-		return new Promise(async (resolve, reject) => {
+	async initialize(context, resolution, shader) {
+		return await new Promise(async (resolve, reject) => {
 			const adapter = await navigator.gpu?.requestAdapter();
-			const device = await adapter?.requestDevice();
+			this.device = await adapter?.requestDevice();
 
-			if (!device) {
+			if (!this.device) {
 				reject('need a browser that supports WebGPU');
 			}
 			const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 			context.configure({
-				device,
+				device:this.device,
 				format: presentationFormat,
 			});
 
-			const module = device.createShaderModule({
+			const module = this.device.createShaderModule({
 				label: 'our hardcoded red triangle shaders',
-				code: this.shader.code,
+				code: shader.code,
 			});
 
-			const pipeline = device.createRenderPipeline({
+			this.pipeline = this.device.createRenderPipeline({
 				label: 'our hardcoded red triangle pipeline',
 				layout: 'auto',
 				vertex: {
@@ -42,18 +30,18 @@ export default class Pixelating {
 				},
 			});
 			const uniformBufferSize = 4;
-			const uniformBuffer = device.createBuffer({
+			this.uniformBuffer = this.device.createBuffer({
 				size: uniformBufferSize,
 				usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 			});
-			const bindGroup = device.createBindGroup({
+			this.bindGroup = this.device.createBindGroup({
 				label: 'triangle bind group',
-				layout: pipeline.getBindGroupLayout(0),
+				layout: this.pipeline.getBindGroupLayout(0),
 				entries: [
-					{ binding: 0, resource: { buffer: uniformBuffer } },
+					{ binding: 0, resource: { buffer: this.uniformBuffer } },
 				],
 			});
-			const renderPassDescriptor = {
+			this.renderPassDescriptor = {
 				label: 'our basic canvas renderPass',
 				colorAttachments: [
 					{
@@ -64,35 +52,11 @@ export default class Pixelating {
 					},
 				],
 			};
-			const uniformData = new Float32Array([0]);
-			function render(time) {
-				// Get the current texture from the canvas context and
-				// set it as the texture to render to.
-				renderPassDescriptor.colorAttachments[0].view =
-					context.getCurrentTexture().createView();
-				// copy the values from JavaScript to the GPU
-				uniformData[0] = time;
-				device.queue.writeBuffer(
-					uniformBuffer,
-					0,
-					uniformData.buffer,
-					uniformData.byteOffset,
-					uniformData.byteLength,
-				);
+			this.uniformData = new Float32Array([0]);
 
-				const encoder = device.createCommandEncoder({ label: 'our encoder' });
-				const pass = encoder.beginRenderPass(renderPassDescriptor);
-				pass.setPipeline(pipeline);
-				pass.setBindGroup(0, bindGroup);
-				pass.draw(6);  // call our vertex shader 3 times
-				pass.end();
-				const commandBuffer = encoder.finish();
-				device.queue.submit([commandBuffer]);
-			}
-
-			Object.assign(context.canvas, this.resolutions[this.currentResolution]);
 			this.context = context;
-			resolve(render);
+			this.changeResolution(resolution);
+			resolve();
 		});
 	}
 
@@ -118,7 +82,29 @@ export default class Pixelating {
 	};
 
 	render(time, callback) {
-		const program = this.program;
+		// Get the current texture from the canvas context and
+		// set it as the texture to render to.
+		this.renderPassDescriptor.colorAttachments[0].view =
+			this.context.getCurrentTexture().createView();
+		// copy the values from JavaScript to the GPU
+		this.uniformData[0] = time;
+		this.device.queue.writeBuffer(
+			this.uniformBuffer,
+			0,
+			this.uniformData.buffer,
+			this.uniformData.byteOffset,
+			this.uniformData.byteLength,
+		);
+
+		const encoder = this.device.createCommandEncoder({ label: 'our encoder' });
+		const pass = encoder.beginRenderPass(this.renderPassDescriptor);
+		pass.setPipeline(this.pipeline);
+		pass.setBindGroup(0, this.bindGroup);
+		pass.draw(6);  // call our vertex shader 3 times
+		pass.end();
+		const commandBuffer = encoder.finish();
+		this.device.queue.submit([commandBuffer]);
+		/*const program = this.program;
 		if (program) {
 			const context = this.context;
 			const uniforms = this.shaders.uniforms;
@@ -132,10 +118,10 @@ export default class Pixelating {
 			if (callback) {
 				callback(context, program);
 			}
-		}
+		}*/
 	}
 
-	onChange(event) {
+	changeResolution(resolution) {
 		if (this.context) {
 			//TODO
 			/*context.viewport(0, 0, canvas.width, canvas.height);
@@ -144,12 +130,13 @@ export default class Pixelating {
 			context.uniform1f(iScaleWidth, resolution.width);
 			context.uniform1f(iScaleHeight, resolution.height);
 			context.drawArrays(context.TRIANGLES, 0, 6);*/
-			const valueAsNumber = event.target.valueAsNumber;
-			Object.assign(this.context.canvas, this.resolutions[valueAsNumber]);
+			Object.assign(this.context.canvas, resolution);
 		}
 	}
 
 	unmount() {
-		this.context.unconfigure();
+		if (this.context) {
+			this.context.unconfigure();
+		}
 	}
 }

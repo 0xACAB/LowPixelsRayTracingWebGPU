@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 export default function Slider(
 	{
 		onChange,
 		resolutions,
-		defaultResolution = 0,
+		resolutionIndex
 	}) {
-	const [state, setState] = useState(defaultResolution);
 	return (
 		<>
 			Resolution:
@@ -14,16 +13,13 @@ export default function Slider(
 				className={`w-52 m-0`}
 				type="range"
 				name="slider"
-				defaultValue={defaultResolution}
+				defaultValue={resolutionIndex}
 				min="0"
 				max={resolutions.length - 1}
-				onChange={(event) => {
-					setState(event.target.valueAsNumber);
-					onChange(event);
-				}}
+				onChange={onChange}
 			/>
 			<label htmlFor="slider">
-				{`${resolutions[state].width}x${resolutions[state].height}`}
+				{`${resolutions[resolutionIndex].width}x${resolutions[resolutionIndex].height}`}
 			</label>
 
 		</>
