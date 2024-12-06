@@ -1,9 +1,13 @@
-const uniforms = {
+export default {
+	iTime: {
+		bufferSize: 4,
+		data: [0],
+	},
 	camera: {
 		type: 'struct',
 		data: {
 			eye: {
-				type: 'uniform3fv',
+				bufferSize: 16,//12+padding
 				data: [0.0, 0.0, 1.0],
 			}
 		}
@@ -12,22 +16,22 @@ const uniforms = {
 		type: 'struct',
 		data: {
 			position: {
-				type: 'uniform3fv',
+				bufferSize: 12,
 				data: [0.0, 0.0, -1.0],
 			},
 			radius: {
-				type: 'uniform1f',
-				data: 0.5,
+				bufferSize: 4,
+				data: [0.5],
 			},
 			material: {
 				type: 'struct',
 				data: {
 					Kd: {
-						type: 'uniform3fv',
+						bufferSize: 16,
 						data: [0.6, 0.6, 0.6],
 					},
 					Ke: {
-						type: 'uniform3fv',
+						bufferSize: 16,
 						data: [0.0, 0.0, 0.0],
 					},
 				}
@@ -38,22 +42,22 @@ const uniforms = {
 		type: 'struct',
 		data: {
 			position: {
-				type: 'uniform3fv',
+				bufferSize: 12,
 				data: [2.0, 2.0, 0.0],
 			},
 			radius: {
-				type: 'uniform1f',
-				data: 0.05,
+				bufferSize: 4,
+				data: [0.05],
 			},
 			material: {
 				type: 'struct',
 				data: {
 					Kd: {
-						type: 'uniform3fv',
+						bufferSize: 12,
 						data: [0.0, 0.0, 0.0],
 					},
 					Ke: {
-						type: 'uniform3fv',
+						bufferSize: 12,
 						data: [1.0, 1.0, 1.0],
 					},
 				}
@@ -61,8 +65,7 @@ const uniforms = {
 		}
 	},
 	iMouse: {
-		type: 'uniform2fv',
+		bufferSize: 8,
 		data: [-999.0, -999.0],
 	},
 };
-export default uniforms;

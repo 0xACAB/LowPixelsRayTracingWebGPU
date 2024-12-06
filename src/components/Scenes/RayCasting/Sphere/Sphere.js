@@ -12,7 +12,6 @@ import { useTwoCanvases } from '@/hooks/useTwoCanvases';
 
 export default function Sphere() {
 	const statsRef = useRef(null);
-
 	const resolutions = [
 		{ width: 8, height: 8 },
 		{ width: 16, height: 16 },
@@ -35,8 +34,6 @@ export default function Sphere() {
 			if (statsRef.current) {
 				statsRef.current.appendChild(stats.dom);
 			}
-
-			const pixelatingContext = pixelatingCanvas.getContext('webgpu');
 
 			const geometry = new THREE.PlaneGeometry(2.0, 2.0);
 			const material = new THREE.MeshBasicMaterial();
@@ -103,10 +100,10 @@ export default function Sphere() {
 				const uv = intersects[0]?.uv;
 				if (uv) {
 					const { width, height } = resolutions[resolutionIndex];
-					uniforms.iMouse.data = [
+					/*uniforms.iMouse.data = [
 						Math.floor((uv.x - 0.5) * width),
 						Math.floor((uv.y - 0.5) * height),
-					];
+					];*/
 
 					const xFloored = Math.floor((uv.x - 0.5) * width) / width;
 					const yFloored = Math.floor((uv.y - 0.5) * height) / height;
@@ -128,14 +125,14 @@ export default function Sphere() {
 			renderer.setSize(width, height);
 
 			//Create controller for plane CanvasTexture
-			const pixelating = new Pixelating();
+			let pixelating = new Pixelating();
 			pixelating
 				.initialize(
-					pixelatingContext,
+					pixelatingCanvas,
 					resolutions[resolutionIndex],
 					{ code: shaderCode, uniforms },
 				)
-				.then(() => {
+				.then((render) => {
 						setMaterialState(material);
 						setPixelatingState(pixelating);
 						//group.rotation.y = Math.PI / 4;
@@ -150,8 +147,7 @@ export default function Sphere() {
 							cameraPerspective.updateProjectionMatrix();
 							if (material.map) {
 								material.map.needsUpdate = true;
-								pixelating.render(time, (context, program) => {
-
+								render(time,  (context) => {
 									const spherePosition = uniforms.sphere.data.position.data;
 									spherePosition[0] = Math.cos(time);
 									spherePosition[1] = -Math.sin(time);
@@ -182,21 +178,20 @@ export default function Sphere() {
 						throw error;
 					},
 				);
-
-			// Cleanup function to dispose of WebGL resources
 			return () => {
-				pixelating.unmount();
 				renderer.setAnimationLoop(null);
 			};
 		});
 
 	const onChange = (event) => {
 		if (pixelatingState && materialState.map) {
+			materialState.map.dispose();
+
 			const newResolutionIndex = event.target.valueAsNumber;
 			setResolutionIndex(newResolutionIndex);
-			uniforms.iMouse.data = [-999, -999];
-			materialState.map.dispose();
 			pixelatingState.changeResolution(resolutions[newResolutionIndex]);
+
+			/*uniforms.iMouse.data = [-999, -999];*/
 		}
 	};
 	return (
