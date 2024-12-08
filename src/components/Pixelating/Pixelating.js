@@ -58,12 +58,12 @@ export default class Pixelating {
 			const setUniforms = (subUniforms) => {
 				const objectInfos = Object.keys(subUniforms).map((uniformName) => {
 					const uniform = subUniforms[uniformName];
-					const uniformBufferSize = recursiveGetUniformBufferSize([uniform])
+					const uniformBufferSize = recursiveGetUniformBufferSize([uniform]);
 					const uniformBuffer = device.createBuffer({
 						size: uniformBufferSize,
 						usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 					});
-					const uniformValues =new Float32Array(uniformBufferSize / 4);
+					const uniformValues = new Float32Array(uniformBufferSize / 4);
 					uniformValues.set(recursiveGetUniformValues([uniform]), 0);
 					return {
 						uniformBuffer,
@@ -74,14 +74,14 @@ export default class Pixelating {
 				const bindGroup = device.createBindGroup({
 					label: `bind group for obj: ${'all'}`,
 					layout: pipeline.getBindGroupLayout(0),
-					entries: objectInfos.map(({uniformBuffer}, index)=>{
-						return { binding: index, resource: { buffer: uniformBuffer } }
-					}).slice(0,3),
+					entries: objectInfos.map(({ uniformBuffer }, index) => {
+						return { binding: index, resource: { buffer: uniformBuffer } };
+					}),
 				});
 
-				return {objectInfos,bindGroup};
+				return { objectInfos, bindGroup };
 			};
-			const {objectInfos,bindGroup} = setUniforms(shader.uniforms);
+			const { objectInfos, bindGroup } = setUniforms(shader.uniforms);
 			const renderPassDescriptor = {
 				label: 'our basic canvas renderPass',
 				colorAttachments: [
@@ -97,51 +97,29 @@ export default class Pixelating {
 			const render = (time, callback) => {
 				renderPassDescriptor.colorAttachments[0].view =
 					context.getCurrentTexture().createView();
-				// copy the values from JavaScript to the GPU
-				/*uniformsData[0] = time;
-				device.queue.writeBuffer(
-					uniformBuffer,
-					0,
-					uniformData.buffer,
-					uniformData.byteOffset,
-					uniformData.byteLength,
-				);*/
-
 				const encoder = device.createCommandEncoder({ label: 'our encoder' });
 				const pass = encoder.beginRenderPass(renderPassDescriptor);
 				pass.setPipeline(pipeline);
-				objectInfos.slice(0,3).forEach(({ uniformBuffer, uniformValues } , index)=>{
-					if (index===0){
-						uniformValues.set([time], 0);
-						device.queue.writeBuffer(uniformBuffer, 0, uniformValues.buffer,
-							uniformValues.byteOffset,
-							uniformValues.byteLength);
-					} else {
-						device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
-					}
+				objectInfos
+					.forEach(
+						({ uniformBuffer, uniformValues }, index) => {
+							if (index === 0) {
+								uniformValues.set([time], 0);
+								// copy the values from JavaScript to the GPU
+								device.queue.writeBuffer(uniformBuffer, 0, uniformValues.buffer,
+									uniformValues.byteOffset,
+									uniformValues.byteLength);
+							} else {
+								device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+							}
 
-					pass.setBindGroup(0, bindGroup);
-					pass.draw(6);  // call our vertex shader 3 times
-				})
+							callback(device, { uniformBuffer, uniformValues }, index);
+							pass.setBindGroup(0, bindGroup);
+							pass.draw(6);  // call our vertex shader 3 times
+						});
 				pass.end();
 				const commandBuffer = encoder.finish();
 				device.queue.submit([commandBuffer]);
-				callback(context);
-				/*const program = this.program;
-				if (program) {
-					const context = this.context;
-					const uniforms = this.shaders.uniforms;
-					context.drawArrays(context.TRIANGLES, 0, 6);
-					const iTimeLocation = context.getUniformLocation(program, 'iTime');
-					context.uniform1f(iTimeLocation, time);
-					if (uniforms.iMouse) {
-						const iMouse = context.getUniformLocation(program, 'iMouse');
-						context.uniform2fv(iMouse, uniforms.iMouse.data);
-					}
-					if (callback) {
-						callback(context, program);
-					}
-				}*/
 			};
 
 			resolve(render);

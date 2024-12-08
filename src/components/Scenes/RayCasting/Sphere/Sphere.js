@@ -100,10 +100,10 @@ export default function Sphere() {
 				const uv = intersects[0]?.uv;
 				if (uv) {
 					const { width, height } = resolutions[resolutionIndex];
-					/*uniforms.iMouse.data = [
+					uniforms.iMouse.data = [
 						Math.floor((uv.x - 0.5) * width),
 						Math.floor((uv.y - 0.5) * height),
-					];*/
+					];
 
 					const xFloored = Math.floor((uv.x - 0.5) * width) / width;
 					const yFloored = Math.floor((uv.y - 0.5) * height) / height;
@@ -147,24 +147,58 @@ export default function Sphere() {
 							cameraPerspective.updateProjectionMatrix();
 							if (material.map) {
 								material.map.needsUpdate = true;
-								render(time,  (context) => {
-									const spherePosition = uniforms.sphere.data.position.data;
-									spherePosition[0] = Math.cos(time);
-									spherePosition[1] = -Math.sin(time);
-									sphere.position.setX(spherePosition[0]);
-									sphere.position.setY(spherePosition[1]);
-									//const spherePositionUniformLocation =
-									//context.getUniformLocation(program, 'sphere.position');
-									//context.uniform3fv(spherePositionUniformLocation, uniforms.sphere.data.position.data);
+								render(time, (device, { uniformBuffer, uniformValues }, index) => {
+									//for each uniform
+									if (index === 2) {
+										//sphere
+										const spherePosition = uniforms.sphere.data.position.data;
+										spherePosition[0] = Math.cos(time);
+										spherePosition[1] = -Math.sin(time);
+										sphere.position.setX(spherePosition[0]);
+										sphere.position.setY(spherePosition[1]);
 
-									const lightPosition = uniforms.lightSphere.data.position.data;
-									lightPosition[0] = 2.0 * Math.cos(time);
-									lightPosition[1] = 2.0 * Math.sin(time);
-									light.position.setX(lightPosition[0]);
-									light.position.setY(lightPosition[1]);
-									//const lightSpherePositionUniformLocation =
-									//context.getUniformLocation(program, 'lightSphere.position');
-									//context.uniform3fv(lightSpherePositionUniformLocation, uniforms.lightSphere.data.position.data);
+										uniformValues.set(
+											[
+												spherePosition[0],
+												spherePosition[1],
+												uniforms.sphere.data.position.data[2],
+												uniforms.sphere.data.radius.data[0],
+												uniforms.sphere.data.material.data.Kd.data[0],
+												uniforms.sphere.data.material.data.Kd.data[1],
+												uniforms.sphere.data.material.data.Kd.data[2],
+												0,
+												uniforms.sphere.data.material.data.Ke.data[0],
+												uniforms.sphere.data.material.data.Ke.data[1],
+												uniforms.sphere.data.material.data.Ke.data[2],
+												0
+											], 0);
+										device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+									}
+									if (index === 3) {
+										//light sphere
+										const lightPosition = uniforms.lightSphere.data.position.data;
+										lightPosition[0] = 2.0 * Math.cos(time);
+										lightPosition[1] = 2.0 * Math.sin(time);
+										light.position.setX(lightPosition[0]);
+										light.position.setY(lightPosition[1]);
+										uniformValues.set(
+											[
+												lightPosition[0],
+												lightPosition[1],
+												uniforms.lightSphere.data.position.data[2],
+												uniforms.lightSphere.data.radius.data[0],
+												uniforms.lightSphere.data.material.data.Kd.data[0],
+												uniforms.lightSphere.data.material.data.Kd.data[1],
+												uniforms.lightSphere.data.material.data.Kd.data[2],
+												0,
+												uniforms.lightSphere.data.material.data.Ke.data[0],
+												uniforms.lightSphere.data.material.data.Ke.data[1],
+												uniforms.lightSphere.data.material.data.Ke.data[2],
+												0
+
+											], 0);
+										device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+									}
 								});
 							}
 							renderer.render(scene, camera);
@@ -191,7 +225,7 @@ export default function Sphere() {
 			setResolutionIndex(newResolutionIndex);
 			pixelatingState.changeResolution(resolutions[newResolutionIndex]);
 
-			/*uniforms.iMouse.data = [-999, -999];*/
+			uniforms.iMouse.data = [-999, -999];
 		}
 	};
 	return (

@@ -53,11 +53,11 @@ export default {
 				type: 'struct',
 				data: {
 					Kd: {
-						bufferSize: 12,
+						bufferSize: 16,
 						data: [0.0, 0.0, 0.0],
 					},
 					Ke: {
-						bufferSize: 12,
+						bufferSize: 16,
 						data: [1.0, 1.0, 1.0],
 					},
 				}
