@@ -1,8 +1,4 @@
 export default {
-	iTime: {
-		bufferSize: 4,
-		data: [0],
-	},
 	camera: {
 		type: 'struct',
 		data: {

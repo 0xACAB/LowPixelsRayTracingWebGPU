@@ -43,7 +43,7 @@ export default function Sphere() {
 			material.map.premultiplyAlpha = false;
 			material.side = THREE.DoubleSide;
 			material.transparent = true;
-			material.opacity = 1;
+			material.opacity = 0.4;
 
 			const plane = new THREE.Mesh(geometry, material);
 			const sphereGeometry = new THREE.SphereGeometry(uniforms.sphere.data.radius.data, 32, 32);
@@ -88,38 +88,6 @@ export default function Sphere() {
 			const pointer = new THREE.Vector2(-999, -999);
 			const rayCaster = new THREE.Raycaster();
 
-			const pointerDown = (event) => {
-				// calculate pointer position in normalized device coordinates
-				// (-1 to +1) for both components
-				const rect = mainCanvas.getBoundingClientRect();
-				pointer.x = ((event.clientX - rect.left) / width) * 2 - 1;
-				pointer.y = -((event.clientY - rect.top) / height) * 2 + 1;
-				rayCaster.setFromCamera(pointer, camera);
-				// calculate objects intersecting the picking ray
-				const intersects = rayCaster.intersectObjects([plane], false);
-				const uv = intersects[0]?.uv;
-				if (uv) {
-					const { width, height } = resolutions[resolutionIndex];
-					uniforms.iMouse.data = [
-						Math.floor((uv.x - 0.5) * width),
-						Math.floor((uv.y - 0.5) * height),
-					];
-
-					const xFloored = Math.floor((uv.x - 0.5) * width) / width;
-					const yFloored = Math.floor((uv.y - 0.5) * height) / height;
-					const xHalfPixel = 1 / width * 0.5;
-					const yHalfPixel = 1 / height * 0.5;
-
-					pointsL2[1] = new THREE.Vector3(
-						3 * (xFloored + xHalfPixel) * plane.geometry.parameters.width,
-						3 * (yFloored + yHalfPixel) * plane.geometry.parameters.height,
-						-2,
-					);
-					lineGeometry2.setFromPoints(pointsL2);
-				}
-
-			};
-			mainCanvas.addEventListener('pointerdown', pointerDown);
 
 			const renderer = new THREE.WebGLRenderer({ canvas: mainCanvas });
 			renderer.setSize(width, height);
@@ -135,6 +103,39 @@ export default function Sphere() {
 				.then((render) => {
 						setMaterialState(material);
 						setPixelatingState(pixelating);
+
+						const pointerDown = (event) => {
+							// calculate pointer position in normalized device coordinates
+							// (-1 to +1) for both components
+							const rect = mainCanvas.getBoundingClientRect();
+							pointer.x = ((event.clientX - rect.left) / width) * 2 - 1;
+							pointer.y = -((event.clientY - rect.top) / height) * 2 + 1;
+							rayCaster.setFromCamera(pointer, camera);
+							// calculate objects intersecting the picking ray
+							const intersects = rayCaster.intersectObjects([plane], false);
+							const uv = intersects[0]?.uv;
+							if (uv) {
+								const { width, height } = pixelating.resolution;
+								uniforms.iMouse.data = [
+									Math.floor((uv.x - 0.5) * width),
+									Math.floor((uv.y - 0.5) * height),
+								];
+
+								const xFloored = Math.floor((uv.x - 0.5) * width) / width;
+								const yFloored = Math.floor((uv.y - 0.5) * height) / height;
+								const xHalfPixel = 1 / width * 0.5;
+								const yHalfPixel = 1 / height * 0.5;
+
+								pointsL2[1] = new THREE.Vector3(
+									3 * (xFloored + xHalfPixel) * plane.geometry.parameters.width,
+									3 * (yFloored + yHalfPixel) * plane.geometry.parameters.height,
+									-2,
+								);
+								lineGeometry2.setFromPoints(pointsL2);
+							}
+
+						};
+						mainCanvas.addEventListener('pointerdown', pointerDown);
 						//group.rotation.y = Math.PI / 4;
 						const animate = (time) => {
 							//convert to seconds
@@ -149,7 +150,7 @@ export default function Sphere() {
 								material.map.needsUpdate = true;
 								render(time, (device, { uniformBuffer, uniformValues }, index) => {
 									//for each uniform
-									if (index === 2) {
+									if (index === 1) {
 										//sphere
 										const spherePosition = uniforms.sphere.data.position.data;
 										spherePosition[0] = Math.cos(time);
@@ -170,11 +171,11 @@ export default function Sphere() {
 												uniforms.sphere.data.material.data.Ke.data[0],
 												uniforms.sphere.data.material.data.Ke.data[1],
 												uniforms.sphere.data.material.data.Ke.data[2],
-												0
+												0,
 											], 0);
 										device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
 									}
-									if (index === 3) {
+									if (index === 2) {
 										//light sphere
 										const lightPosition = uniforms.lightSphere.data.position.data;
 										lightPosition[0] = 2.0 * Math.cos(time);
@@ -194,8 +195,17 @@ export default function Sphere() {
 												uniforms.lightSphere.data.material.data.Ke.data[0],
 												uniforms.lightSphere.data.material.data.Ke.data[1],
 												uniforms.lightSphere.data.material.data.Ke.data[2],
-												0
+												0,
 
+											], 0);
+										device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+									}
+
+									if ([3].includes(index)) {
+										uniformValues.set(
+											[
+												uniforms.iMouse.data[0],
+												uniforms.iMouse.data[1],
 											], 0);
 										device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
 									}
@@ -231,7 +241,7 @@ export default function Sphere() {
 	return (
 		<>
 			<div ref={statsRef}></div>
-			<canvas id="canvas" className="pixelated" width={512} height={512} ref={canvassesRefs.mainCanvas}></canvas>
+			<canvas id="canvas" width={512} height={512} ref={canvassesRefs.mainCanvas}></canvas>
 			<canvas id="canvas" className="hidden" ref={canvassesRefs.pixelatingCanvas}></canvas>
 			<Slider onChange={onChange} resolutions={resolutions} resolutionIndex={resolutionIndex} />
 		</>

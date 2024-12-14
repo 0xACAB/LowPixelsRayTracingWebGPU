@@ -13,11 +13,12 @@ struct Sphere {
     material: Material
 };
 
-@group(0) @binding(0) var<uniform> iTime : f32;
-@group(0) @binding(1) var<uniform> camera : Camera;
-@group(0) @binding(2) var<uniform> sphere : Sphere;
-@group(0) @binding(3) var<uniform> lightSphere : Sphere;
-@group(0) @binding(4) var<uniform> iMouse : vec2f;
+@group(0) @binding(0) var<uniform> camera : Camera;
+@group(0) @binding(1) var<uniform> sphere : Sphere;
+@group(0) @binding(2) var<uniform> lightSphere : Sphere;
+@group(0) @binding(3) var<uniform> iMouse : vec2f;
+@group(0) @binding(4) var<uniform> iScaleWidth : f32;
+@group(0) @binding(5) var<uniform> iScaleHeight : f32;
 
 struct OurVertexShaderOutput {
     @builtin(position) position: vec4f,
@@ -97,12 +98,12 @@ fn rayTrace(fsInput: OurVertexShaderOutput, scene: Scene) -> vec4<f32> {
     ray.direction = normalize(vec3(pixel.coordinate.xy, 0) - camera.eye);
 
     for (var i=0; i<spheresCount; i++) {
-        var rayLength = computeSphereIntersection(ray, scene.spheres[i]);
+        let rayLength = computeSphereIntersection(ray, scene.spheres[i]);
         if (rayLength > 0 && rayLength < FARAWAY) {
             //Точка пересечения луча со сферой
-            var P = ray.origin + rayLength*ray.direction;
+            let P = ray.origin + rayLength*ray.direction;
             //Нормаль к этой точке
-            var N = normalize(P - scene.spheres[i].position);
+            let N = normalize(P - scene.spheres[i].position);
             if (all(scene.spheres[i].material.Ke!=vec3<f32>(0.0,0.0,0.0))) {
                 pixel.color = scene.spheres[i].material.Ke;
             } else {
@@ -110,17 +111,21 @@ fn rayTrace(fsInput: OurVertexShaderOutput, scene: Scene) -> vec4<f32> {
                  for (var j=0; j<spheresCount; j++) {
                     //Для всех сфер являющихся источниками света
                     if (all(scene.spheres[j].material.Ke!=vec3<f32>(0.0,0.0,0.0))) {
-                        var E = scene.spheres[j].position - P;
-                        var lamb = max(0.0, dot(E, N) / length(E));
+                        let E = scene.spheres[j].position - P;
+                        let lamb = max(0.0, dot(E, N) / length(E));
                         result += lamb * scene.spheres[i].material.Kd * scene.spheres[j].material.Ke;
                     }
                  }
                  pixel.color = result;
              }
         }
-
     }
-    let test = lightSphere.position.x*camera.eye.x*sphere.position.x*iTime*iMouse.x;
+
+    //Делим на 2 по причине того что 0 в середине и расстояние от 0 до 1 равно половине ширины и высоты текстуры
+    if (all(floor(vec2(pixel.coordinate.x*(iScaleWidth/2.0), pixel.coordinate.y*(iScaleHeight/2.0)))==iMouse)) {
+        pixel.color = vec3f(1.0, 0.0, 0.0);
+    }
+
     return vec4f(pixel.color, 1);
 }
 
