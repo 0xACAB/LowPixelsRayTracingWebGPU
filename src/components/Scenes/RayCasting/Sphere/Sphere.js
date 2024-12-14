@@ -8,7 +8,7 @@ import uniforms from './uniforms';
 
 import Pixelating from '@/components/Pixelating/Pixelating';
 import Slider from '@/components/Pixelating/Slider';
-import { useTwoCanvases } from '@/hooks/useTwoCanvases';
+import { useCanvasesAndSlider } from '@/hooks/useTwoCanvases';
 
 export default function Sphere() {
 	const statsRef = useRef(null);
@@ -22,12 +22,10 @@ export default function Sphere() {
 		{ width: 512, height: 512 },
 	];
 	const [resolutionIndex, setResolutionIndex] = useState(3);
-	const [materialState, setMaterialState] = useState(null);
-	const [pixelatingState, setPixelatingState] = useState(null);
-	const canvassesRefs = useTwoCanvases(
+	const refs = useCanvasesAndSlider(
 		'mainCanvas',
 		'pixelatingCanvas',
-		([mainCanvas, pixelatingCanvas]) => {
+		([mainCanvas, pixelatingCanvas, slider]) => {
 
 			//Create Stats for fps info
 			const stats = new Stats();
@@ -88,7 +86,6 @@ export default function Sphere() {
 			const pointer = new THREE.Vector2(-999, -999);
 			const rayCaster = new THREE.Raycaster();
 
-
 			const renderer = new THREE.WebGLRenderer({ canvas: mainCanvas });
 			renderer.setSize(width, height);
 
@@ -101,9 +98,13 @@ export default function Sphere() {
 					{ code: shaderCode, uniforms },
 				)
 				.then((render) => {
-						setMaterialState(material);
-						setPixelatingState(pixelating);
-
+						slider.addEventListener('input', (event) => {
+							material.map.dispose();
+							const newResolutionIndex = event.target.valueAsNumber;
+							setResolutionIndex(newResolutionIndex);
+							pixelating.changeResolution(resolutions[newResolutionIndex]);
+							uniforms.iMouse.data = [-999, -999];
+						});
 						const pointerDown = (event) => {
 							// calculate pointer position in normalized device coordinates
 							// (-1 to +1) for both components
@@ -227,23 +228,12 @@ export default function Sphere() {
 			};
 		});
 
-	const onChange = (event) => {
-		if (pixelatingState && materialState.map) {
-			materialState.map.dispose();
-
-			const newResolutionIndex = event.target.valueAsNumber;
-			setResolutionIndex(newResolutionIndex);
-			pixelatingState.changeResolution(resolutions[newResolutionIndex]);
-
-			uniforms.iMouse.data = [-999, -999];
-		}
-	};
 	return (
 		<>
 			<div ref={statsRef}></div>
-			<canvas id="canvas" width={512} height={512} ref={canvassesRefs.mainCanvas}></canvas>
-			<canvas id="canvas" className="hidden" ref={canvassesRefs.pixelatingCanvas}></canvas>
-			<Slider onChange={onChange} resolutions={resolutions} resolutionIndex={resolutionIndex} />
+			<canvas id="canvas" width={512} height={512} ref={refs.mainCanvas}></canvas>
+			<canvas id="canvas" className="hidden" ref={refs.pixelatingCanvas}></canvas>
+			<Slider ref={refs.slider} resolutions={resolutions} resolutionIndex={resolutionIndex} />
 		</>
 	);
 }

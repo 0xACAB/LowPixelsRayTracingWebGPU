@@ -1,5 +1,6 @@
 export default class Pixelating {
 	initialize(canvas, resolution, shader) {
+		this.resolution = resolution;
 		return new Promise(async (resolve, reject) => {
 			const adapter = await navigator.gpu?.requestAdapter();
 			const device = this.device = await adapter?.requestDevice();

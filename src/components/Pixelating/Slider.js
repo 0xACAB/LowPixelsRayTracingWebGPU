@@ -2,9 +2,9 @@ import React from 'react';
 
 export default function Slider(
 	{
-		onChange,
 		resolutions,
-		resolutionIndex
+		resolutionIndex,
+		ref
 	}) {
 	return (
 		<>
@@ -16,7 +16,7 @@ export default function Slider(
 				defaultValue={resolutionIndex}
 				min="0"
 				max={resolutions.length - 1}
-				onChange={onChange}
+				ref={ref}
 			/>
 			<label htmlFor="slider">
 				{`${resolutions[resolutionIndex].width}x${resolutions[resolutionIndex].height}`}
