@@ -1,6 +1,5 @@
 export default class Pixelating {
 	initialize(canvas, resolution, shader) {
-		this.resolution = resolution;
 		return new Promise(async (resolve, reject) => {
 			const adapter = await navigator.gpu?.requestAdapter();
 			const device = this.device = await adapter?.requestDevice();
@@ -82,7 +81,7 @@ export default class Pixelating {
 
 				return { objectInfos, bindGroup };
 			};
-			this.uniforms = {
+			const { objectInfos, bindGroup } = setUniforms({
 				...shader.uniforms,
 				iScaleWidth: {
 					bufferSize: 4,
@@ -92,8 +91,7 @@ export default class Pixelating {
 					bufferSize: 4,
 					data: [resolution.height],
 				},
-			};
-			const { objectInfos, bindGroup } = setUniforms(this.uniforms);
+			});
 			this.objectInfos = objectInfos;
 
 			const renderPassDescriptor = {
@@ -128,20 +126,24 @@ export default class Pixelating {
 				device.queue.submit([commandBuffer]);
 			};
 
-			this.changeResolution(resolution);
-			resolve(render);
-		});
-	}
+			const changeResolution = (resolution) => {
+				const { context, device, objectInfos } = this;
+				[
+					objectInfos[objectInfos.length-2],
+					objectInfos[objectInfos.length-1]
+				].forEach(({ uniformBuffer, uniformValues }, index) => {
+					uniformValues.set([(index === 0) ? resolution.width : resolution.height], 0);
+					device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+				});
+				Object.assign(context.canvas, resolution);
+				this.resolution = resolution;
+			};
+			changeResolution(resolution);
 
-	changeResolution(resolution) {
-		const { context, device, objectInfos } = this;
-		if (context && device && objectInfos) {
-			this.resolution = resolution;
-			[objectInfos[4], objectInfos[5]].forEach(({ uniformBuffer, uniformValues }, index) => {
-				uniformValues.set([(index === 0) ? resolution.width : resolution.height], 0);
-				device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+			resolve({
+				render,
+				changeResolution,
 			});
-			Object.assign(this.context.canvas, resolution);
-		}
+		});
 	}
 }
