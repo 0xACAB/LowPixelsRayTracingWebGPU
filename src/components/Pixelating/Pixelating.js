@@ -2,13 +2,13 @@ export default class Pixelating {
 	initialize(canvas, resolution, shader) {
 		return new Promise(async (resolve, reject) => {
 			const adapter = await navigator.gpu?.requestAdapter();
-			const device = this.device = await adapter?.requestDevice();
+			const device = await adapter?.requestDevice();
 
 			if (!device) {
 				reject('need a browser that supports WebGPU');
 			}
 
-			const context = this.context = canvas.getContext('webgpu');
+			const context = canvas.getContext('webgpu');
 
 			const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 			context.configure({
@@ -17,12 +17,12 @@ export default class Pixelating {
 			});
 
 			const module = device.createShaderModule({
-				label: 'our hardcoded red triangle shaders',
+				label: 'shaders',
 				code: shader.code,
 			});
 
 			const pipeline = device.createRenderPipeline({
-				label: 'our hardcoded pipeline',
+				label: 'pipeline',
 				layout: 'auto',
 				vertex: {
 					module,
@@ -32,39 +32,38 @@ export default class Pixelating {
 					targets: [{ format: presentationFormat }],
 				},
 			});
-			const recursiveGetUniformBufferSize = (subUniforms) => {
-				return Object.keys(subUniforms).reduce((prevSize, uniformName) => {
-					const uniform = subUniforms[uniformName];
-					if (uniform.type !== 'struct') {
-						return prevSize + uniform.bufferSize;
-					} else {
-						return prevSize + recursiveGetUniformBufferSize(subUniforms[uniformName].data);
-					}
-				}, 0);
+			const recursiveGetUniformBufferSize = (uniform) => {
+				if (uniform.hasOwnProperty('bufferSize')) {
+					return uniform.bufferSize;
+				} else {
+					return Object.keys(uniform).reduce((prevValues, subUniformName) => {
+						return prevValues + recursiveGetUniformBufferSize(uniform[subUniformName]);
+					}, 0);
+				}
 			};
 
-			const recursiveGetUniformValues = (subUniforms) => {
-				return Object.keys(subUniforms).reduce((prevValues, uniformName) => {
-					const uniform = subUniforms[uniformName];
-					if (uniform.type !== 'struct') {
-						prevValues.push(...uniform.data);
+			const recursiveGetUniformValues = (uniform) => {
+				if (uniform.hasOwnProperty('bufferSize')) {
+					return uniform.data;
+				} else {
+					return Object.keys(uniform).reduce((prevValues, subUniformName) => {
+						prevValues.push(...recursiveGetUniformValues(uniform[subUniformName]));
 						return prevValues;
-					} else {
-						return recursiveGetUniformValues(subUniforms[uniformName].data);
-					}
-				}, []);
+					}, []);
+				}
 			};
 
 			const setUniforms = (subUniforms) => {
 				const objectInfos = Object.keys(subUniforms).map((uniformName) => {
 					const uniform = subUniforms[uniformName];
-					const uniformBufferSize = recursiveGetUniformBufferSize([uniform]);
+					const uniformBufferSize = recursiveGetUniformBufferSize(uniform);
 					const uniformBuffer = device.createBuffer({
+						label: `${uniformName}`,
 						size: uniformBufferSize,
 						usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 					});
 					const uniformValues = new Float32Array(uniformBufferSize / 4);
-					uniformValues.set(recursiveGetUniformValues([uniform]), 0);
+					uniformValues.set(recursiveGetUniformValues(uniform), 0);
 					return {
 						uniformBuffer,
 						uniformValues,
@@ -72,7 +71,7 @@ export default class Pixelating {
 				});
 
 				const bindGroup = device.createBindGroup({
-					label: `bind group for obj: ${'all'}`,
+					label: `bind group`,
 					layout: pipeline.getBindGroupLayout(0),
 					entries: objectInfos.map(({ uniformBuffer }, index) => {
 						return { binding: index, resource: { buffer: uniformBuffer } };
@@ -92,7 +91,6 @@ export default class Pixelating {
 					data: [resolution.height],
 				},
 			});
-			this.objectInfos = objectInfos;
 
 			const renderPassDescriptor = {
 				label: 'our basic canvas renderPass',
@@ -127,10 +125,9 @@ export default class Pixelating {
 			};
 
 			const changeResolution = (resolution) => {
-				const { context, device, objectInfos } = this;
 				[
-					objectInfos[objectInfos.length-2],
-					objectInfos[objectInfos.length-1]
+					objectInfos[objectInfos.length - 2],
+					objectInfos[objectInfos.length - 1],
 				].forEach(({ uniformBuffer, uniformValues }, index) => {
 					uniformValues.set([(index === 0) ? resolution.width : resolution.height], 0);
 					device.queue.writeBuffer(uniformBuffer, 0, uniformValues);

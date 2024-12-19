@@ -1,7 +1,4 @@
 {
-  "company": {
-    "name": "Ray tracing"
-  },
   "about": {
     "sections": [
       {
@@ -27,10 +24,6 @@
       {
         "name": "Расширенная сцена",
         "href": "/geometry/raycasting/template"
-      },
-      {
-        "name": "Сцена со сферой трассировкой пути",
-        "href": "/geometry/pathtracing/sphere"
       }
     ],
     "socialMedia": {

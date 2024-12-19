@@ -45,10 +45,10 @@ export default function Sphere() {
 		material.opacity = 0.4;
 
 		const plane = new THREE.Mesh(geometry, material);
-		const sphereGeometry = new THREE.SphereGeometry(uniforms.sphere.data.radius.data, 32, 32);
+		const sphereGeometry = new THREE.SphereGeometry(uniforms.sphere.radius.data, 32, 32);
 		const sphereMaterial = new THREE.MeshLambertMaterial({ color: 0xaaaaaa });
 		const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-		const spherePosition = uniforms.sphere.data.position.data;
+		const spherePosition = uniforms.sphere.position.data;
 		sphere.position.set(spherePosition[0], spherePosition[1], spherePosition[2]);
 
 		const lineMaterial2 = new THREE.LineBasicMaterial({ color: 0x00FF00 });
@@ -59,7 +59,7 @@ export default function Sphere() {
 		];
 
 		const light = new THREE.DirectionalLight(0xffffff, 3);
-		const lightPosition = uniforms.lightSphere.data.position.data;
+		const lightPosition = uniforms.lightSphere.position.data;
 		light.position.set(lightPosition[0], lightPosition[1], lightPosition[2]);
 
 		const { width, height } = mainCanvas;
@@ -153,7 +153,7 @@ export default function Sphere() {
 								//for each uniform
 								if (index === 1) {
 									//sphere
-									const spherePosition = uniforms.sphere.data.position.data;
+									const spherePosition = uniforms.sphere.position.data;
 									spherePosition[0] = Math.cos(time);
 									spherePosition[1] = -Math.sin(time);
 									sphere.position.setX(spherePosition[0]);
@@ -163,22 +163,22 @@ export default function Sphere() {
 										[
 											spherePosition[0],
 											spherePosition[1],
-											uniforms.sphere.data.position.data[2],
-											uniforms.sphere.data.radius.data[0],
-											uniforms.sphere.data.material.data.Kd.data[0],
-											uniforms.sphere.data.material.data.Kd.data[1],
-											uniforms.sphere.data.material.data.Kd.data[2],
+											uniforms.sphere.position.data[2],
+											uniforms.sphere.radius.data[0],
+											uniforms.sphere.material.Kd.data[0],
+											uniforms.sphere.material.Kd.data[1],
+											uniforms.sphere.material.Kd.data[2],
 											0,
-											uniforms.sphere.data.material.data.Ke.data[0],
-											uniforms.sphere.data.material.data.Ke.data[1],
-											uniforms.sphere.data.material.data.Ke.data[2],
+											uniforms.sphere.material.Ke.data[0],
+											uniforms.sphere.material.Ke.data[1],
+											uniforms.sphere.material.Ke.data[2],
 											0,
 										], 0);
 									device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
 								}
 								if (index === 2) {
 									//light sphere
-									const lightPosition = uniforms.lightSphere.data.position.data;
+									const lightPosition = uniforms.lightSphere.position.data;
 									lightPosition[0] = 2.0 * Math.cos(time);
 									lightPosition[1] = 2.0 * Math.sin(time);
 									light.position.setX(lightPosition[0]);
@@ -187,15 +187,15 @@ export default function Sphere() {
 										[
 											lightPosition[0],
 											lightPosition[1],
-											uniforms.lightSphere.data.position.data[2],
-											uniforms.lightSphere.data.radius.data[0],
-											uniforms.lightSphere.data.material.data.Kd.data[0],
-											uniforms.lightSphere.data.material.data.Kd.data[1],
-											uniforms.lightSphere.data.material.data.Kd.data[2],
+											uniforms.lightSphere.position.data[2],
+											uniforms.lightSphere.radius.data[0],
+											uniforms.lightSphere.material.Kd.data[0],
+											uniforms.lightSphere.material.Kd.data[1],
+											uniforms.lightSphere.material.Kd.data[2],
 											0,
-											uniforms.lightSphere.data.material.data.Ke.data[0],
-											uniforms.lightSphere.data.material.data.Ke.data[1],
-											uniforms.lightSphere.data.material.data.Ke.data[2],
+											uniforms.lightSphere.material.Ke.data[0],
+											uniforms.lightSphere.material.Ke.data[1],
+											uniforms.lightSphere.material.Ke.data[2],
 											0,
 
 										], 0);

@@ -47,7 +47,7 @@ export default function Triangle() {
 		const plane = new THREE.Mesh(geometry, material);
 		const triangleGeometry = new THREE.BufferGeometry();
 		const vertices = new Float32Array(
-			uniforms.triangle0.data.points.data
+			uniforms.triangle0.points.data
 		);
 		triangleGeometry.setIndex([0, 1, 2]);
 		triangleGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
@@ -154,7 +154,7 @@ export default function Triangle() {
 									//triangle
 									uniformValues.set(
 										[
-											...uniforms.triangle0.data.points.data.reduce((prev, value, index)=>{
+											...uniforms.triangle0.points.data.reduce((prev, value, index)=>{
 												prev.push(value);
 												if (index % 3 === 2){
 													//add offset for 16 bytes bufferSize for vec3f
@@ -162,11 +162,11 @@ export default function Triangle() {
 												}
 												return prev
 											}, []),
-											...uniforms.triangle0.data.color.data,
+											...uniforms.triangle0.color.data,
 											0,
-											...uniforms.triangle0.data.material.data.Kd.data,
+											...uniforms.triangle0.material.Kd.data,
 											0,
-											...uniforms.triangle0.data.material.data.Ke.data,
+											...uniforms.triangle0.material.Ke.data,
 											0,
 										], 0);
 									device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
