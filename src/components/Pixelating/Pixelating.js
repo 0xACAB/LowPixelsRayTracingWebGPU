@@ -53,27 +53,29 @@ export default class Pixelating {
 				}
 			};
 
-			const setUniforms = (subUniforms) => {
-				const objectInfos = Object.keys(subUniforms).map((uniformName) => {
-					const uniform = subUniforms[uniformName];
+			const setUniforms = (uniforms) => {
+				const objectInfos = Object.keys(uniforms).reduce((resultObj, uniformName) => {
+					const uniform = uniforms[uniformName];
 					const uniformBufferSize = recursiveGetUniformBufferSize(uniform);
 					const uniformBuffer = device.createBuffer({
-						label: `${uniformName}`,
+						label: uniformName,
 						size: uniformBufferSize,
 						usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 					});
 					const uniformValues = new Float32Array(uniformBufferSize / 4);
 					uniformValues.set(recursiveGetUniformValues(uniform), 0);
-					return {
+					resultObj[uniformName] = {
 						uniformBuffer,
 						uniformValues,
 					};
-				});
+					return resultObj;
+				}, {});
 
 				const bindGroup = device.createBindGroup({
 					label: `bind group`,
 					layout: pipeline.getBindGroupLayout(0),
-					entries: objectInfos.map(({ uniformBuffer }, index) => {
+					entries: Object.keys(objectInfos).map((key, index) => {
+						const { uniformBuffer } = objectInfos[key];
 						return { binding: index, resource: { buffer: uniformBuffer } };
 					}),
 				});
@@ -110,28 +112,27 @@ export default class Pixelating {
 				const encoder = device.createCommandEncoder({ label: 'our encoder' });
 				const pass = encoder.beginRenderPass(renderPassDescriptor);
 				pass.setPipeline(pipeline);
-				objectInfos
-					.forEach(
-						({ uniformBuffer, uniformValues }, index) => {
-							device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
-							callback(device, { uniformBuffer, uniformValues }, index);
-							pass.setBindGroup(0, bindGroup);
-							pass.draw(6);  // call our vertex shader 3 times
-						},
-					);
+				Object.keys(objectInfos).forEach((key) => {
+					const { uniformBuffer, uniformValues } = objectInfos[key];
+					device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+					callback(device, objectInfos[key], key);
+					pass.setBindGroup(0, bindGroup);
+					pass.draw(6);  // call our vertex shader 3 times
+				});
 				pass.end();
 				const commandBuffer = encoder.finish();
 				device.queue.submit([commandBuffer]);
 			};
 
 			const changeResolution = (resolution) => {
-				[
-					objectInfos[objectInfos.length - 2],
-					objectInfos[objectInfos.length - 1],
-				].forEach(({ uniformBuffer, uniformValues }, index) => {
-					uniformValues.set([(index === 0) ? resolution.width : resolution.height], 0);
-					device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
-				});
+				objectInfos.iScaleWidth.uniformValues.set([resolution.width], 0);
+				device.queue.writeBuffer(objectInfos.iScaleWidth.uniformBuffer, 0,
+					objectInfos.iScaleWidth.uniformValues);
+
+				objectInfos.iScaleHeight.uniformValues.set([resolution.height], 0);
+				device.queue.writeBuffer(objectInfos.iScaleHeight.uniformBuffer, 0,
+					objectInfos.iScaleHeight.uniformValues);
+
 				Object.assign(context.canvas, resolution);
 				this.resolution = resolution;
 			};

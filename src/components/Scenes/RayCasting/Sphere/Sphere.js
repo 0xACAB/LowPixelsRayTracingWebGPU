@@ -149,72 +149,49 @@ export default function Sphere() {
 						cameraPerspective.updateProjectionMatrix();
 						if (material.map) {
 							material.map.needsUpdate = true;
-							render(time, (device, { uniformBuffer, uniformValues }, index) => {
+							render(time, (device, { uniformBuffer, uniformValues }, key) => {
 								//for each uniform
-								if (index === 1) {
+								const uniform = uniforms[key];
+								if (key === 'sphere') {
 									//sphere
-									const spherePosition = uniforms.sphere.position.data;
+									const spherePosition = uniform.position.data;
 									spherePosition[0] = Math.cos(time);
 									spherePosition[1] = -Math.sin(time);
-									sphere.position.setX(spherePosition[0]);
-									sphere.position.setY(spherePosition[1]);
+									light.position.set(spherePosition[0], spherePosition[1]);
 
 									uniformValues.set(
 										[
-											spherePosition[0],
-											spherePosition[1],
-											uniforms.sphere.position.data[2],
-											uniforms.sphere.radius.data[0],
-											uniforms.sphere.material.Kd.data[0],
-											uniforms.sphere.material.Kd.data[1],
-											uniforms.sphere.material.Kd.data[2],
-											0,
-											uniforms.sphere.material.Ke.data[0],
-											uniforms.sphere.material.Ke.data[1],
-											uniforms.sphere.material.Ke.data[2],
-											0,
+											...spherePosition,
+											uniform.radius.data[0],
+											...uniform.material.Kd.data, 0,
+											...uniform.material.Ke.data, 0,
 										], 0);
 									device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
 								}
-								if (index === 2) {
+								if (key === 'lightSphere') {
 									//light sphere
-									const lightPosition = uniforms.lightSphere.position.data;
+									const lightPosition = uniform.position.data;
 									lightPosition[0] = 2.0 * Math.cos(time);
 									lightPosition[1] = 2.0 * Math.sin(time);
-									light.position.setX(lightPosition[0]);
-									light.position.setY(lightPosition[1]);
+									light.position.set(lightPosition[0], lightPosition[1]);
 									uniformValues.set(
 										[
-											lightPosition[0],
-											lightPosition[1],
-											uniforms.lightSphere.position.data[2],
-											uniforms.lightSphere.radius.data[0],
-											uniforms.lightSphere.material.Kd.data[0],
-											uniforms.lightSphere.material.Kd.data[1],
-											uniforms.lightSphere.material.Kd.data[2],
-											0,
-											uniforms.lightSphere.material.Ke.data[0],
-											uniforms.lightSphere.material.Ke.data[1],
-											uniforms.lightSphere.material.Ke.data[2],
-											0,
-
+											...lightPosition,
+											uniform.radius.data[0],
+											...uniform.material.Kd.data, 0,
+											...uniform.material.Ke.data, 0,
 										], 0);
 									device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
 								}
 
-								if (index === 3) {
-									uniformValues.set(
-										[
-											uniforms.iMouse.data[0],
-											uniforms.iMouse.data[1],
-										], 0);
+								if (key === 'iMouse') {
+									uniformValues.set(uniform.data, 0);
 									device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
 								}
 							});
 						}
 						renderer.render(scene, camera);
 						stats.update();
-
 					};
 
 					renderer.setAnimationLoop(animate);

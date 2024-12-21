@@ -47,7 +47,7 @@ export default function Triangle() {
 		const plane = new THREE.Mesh(geometry, material);
 		const triangleGeometry = new THREE.BufferGeometry();
 		const vertices = new Float32Array(
-			uniforms.triangle0.points.data
+			uniforms.triangle0.points.data,
 		);
 		triangleGeometry.setIndex([0, 1, 2]);
 		triangleGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
@@ -148,42 +148,35 @@ export default function Triangle() {
 						cameraPerspective.updateProjectionMatrix();
 						if (material.map) {
 							material.map.needsUpdate = true;
-							render(time, (device, { uniformBuffer, uniformValues }, index) => {
+							render(time, (device, { uniformBuffer, uniformValues }, key) => {
 								//for each uniform
-								if (index === 1) {
+								const uniform = uniforms[key];
+								if (key === 'triangle0') {
 									//triangle
 									uniformValues.set(
 										[
-											...uniforms.triangle0.points.data.reduce((prev, value, index)=>{
+											...uniform.points.data.reduce((prev, value, index) => {
 												prev.push(value);
-												if (index % 3 === 2){
+												if (index % 3 === 2) {
 													//add offset for 16 bytes bufferSize for vec3f
 													prev.push(0);
 												}
-												return prev
+												return prev;
 											}, []),
-											...uniforms.triangle0.color.data,
-											0,
-											...uniforms.triangle0.material.Kd.data,
-											0,
-											...uniforms.triangle0.material.Ke.data,
-											0,
+											...uniform.color.data, 0,
+											...uniform.material.Kd.data, 0,
+											...uniform.material.Ke.data, 0,
 										], 0);
 									device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
 								}
-								if (index === 2) {
-									uniformValues.set(
-										[
-											uniforms.iMouse.data[0],
-											uniforms.iMouse.data[1],
-										], 0);
+								if (key === 'iMouse') {
+									uniformValues.set(uniform.data, 0);
 									device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
 								}
 							});
 						}
 						renderer.render(scene, camera);
 						stats.update();
-
 					};
 
 					renderer.setAnimationLoop(animate);
