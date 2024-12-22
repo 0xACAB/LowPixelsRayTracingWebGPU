@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import Pixelating from '@/components/Pixelating/Pixelating';
 import vert from '@/components/Scenes/RayCasting/Test/shaders/vert.glsl';
 import frag from '@/components/Scenes/RayCasting/Test/shaders/frag.glsl';

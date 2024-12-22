@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function MobilePage() {
 	return (
 		<div className={`bg-background grid gap-y-16 overflow-hidden`}>

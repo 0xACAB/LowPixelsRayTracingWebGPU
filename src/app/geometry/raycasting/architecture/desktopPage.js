@@ -1,4 +1,3 @@
-import React from 'react';
 import ThreeScene from '@/components/Scenes/RayCasting/Three/Three';
 import Link from 'next/link';
 

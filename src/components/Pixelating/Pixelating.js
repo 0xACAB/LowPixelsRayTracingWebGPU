@@ -65,6 +65,7 @@ export default class Pixelating {
 					const uniformValues = new Float32Array(uniformBufferSize / 4);
 					uniformValues.set(recursiveGetUniformValues(uniform), 0);
 					resultObj[uniformName] = {
+						uniformName,
 						uniformBuffer,
 						uniformValues,
 					};
@@ -106,19 +107,21 @@ export default class Pixelating {
 				],
 			};
 
-			const render = function(time, callback) {
+			const render = function(time, uniNamesForChange, callback) {
 				renderPassDescriptor.colorAttachments[0].view =
 					context.getCurrentTexture().createView();
 				const encoder = device.createCommandEncoder({ label: 'our encoder' });
 				const pass = encoder.beginRenderPass(renderPassDescriptor);
 				pass.setPipeline(pipeline);
 				Object.keys(objectInfos).forEach((key) => {
-					const { uniformBuffer, uniformValues } = objectInfos[key];
-					device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
-					callback(device, objectInfos[key], key);
-					pass.setBindGroup(0, bindGroup);
-					pass.draw(6);  // call our vertex shader 3 times
+					if (uniNamesForChange.includes(key)) {
+						callback(device, objectInfos[key]);
+					} else {
+						device.queue.writeBuffer(objectInfos[key].uniformBuffer, 0, objectInfos[key].uniformValues);
+					}
 				});
+				pass.setBindGroup(0, bindGroup);
+				pass.draw(6);  // call our vertex shader 3 times
 				pass.end();
 				const commandBuffer = encoder.finish();
 				device.queue.submit([commandBuffer]);

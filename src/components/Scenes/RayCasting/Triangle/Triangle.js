@@ -148,32 +148,35 @@ export default function Triangle() {
 						cameraPerspective.updateProjectionMatrix();
 						if (material.map) {
 							material.map.needsUpdate = true;
-							render(time, (device, { uniformBuffer, uniformValues }, key) => {
-								//for each uniform
-								const uniform = uniforms[key];
-								if (key === 'triangle0') {
-									//triangle
-									uniformValues.set(
-										[
-											...uniform.points.data.reduce((prev, value, index) => {
-												prev.push(value);
-												if (index % 3 === 2) {
-													//add offset for 16 bytes bufferSize for vec3f
-													prev.push(0);
-												}
-												return prev;
-											}, []),
-											...uniform.color.data, 0,
-											...uniform.material.Kd.data, 0,
-											...uniform.material.Ke.data, 0,
-										], 0);
-									device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
-								}
-								if (key === 'iMouse') {
-									uniformValues.set(uniform.data, 0);
-									device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
-								}
-							});
+							render(
+								time,
+								['triangle0', 'iMouse'],
+								(device, { uniformName, uniformBuffer, uniformValues }) => {
+									//for all second param uniforms
+									const uniform = uniforms[uniformName];
+									if (uniformName === 'triangle0') {
+										//triangle
+										uniformValues.set(
+											[
+												...uniform.points.data.reduce((prev, value, index) => {
+													prev.push(value);
+													if (index % 3 === 2) {
+														//add offset for 16 bytes bufferSize for vec3f
+														prev.push(0);
+													}
+													return prev;
+												}, []),
+												...uniform.color.data, 0,
+												...uniform.material.Kd.data, 0,
+												...uniform.material.Ke.data, 0,
+											], 0);
+										device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+									}
+									if (uniformName === 'iMouse') {
+										uniformValues.set(uniform.data, 0);
+										device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
+									}
+								});
 						}
 						renderer.render(scene, camera);
 						stats.update();

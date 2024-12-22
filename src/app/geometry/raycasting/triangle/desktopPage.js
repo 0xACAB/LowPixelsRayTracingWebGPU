@@ -1,4 +1,3 @@
-import React from 'react';
 import Triangle from '@/components/Scenes/RayCasting/Triangle/Triangle';
 import Link from 'next/link';
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import TestScene from '@/components/Scenes/RayCasting/Test/Test';
 import Link from 'next/link';
 

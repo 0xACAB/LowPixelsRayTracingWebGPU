@@ -48,8 +48,7 @@ export default function Sphere() {
 		const sphereGeometry = new THREE.SphereGeometry(uniforms.sphere.radius.data, 32, 32);
 		const sphereMaterial = new THREE.MeshLambertMaterial({ color: 0xaaaaaa });
 		const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-		const spherePosition = uniforms.sphere.position.data;
-		sphere.position.set(spherePosition[0], spherePosition[1], spherePosition[2]);
+		sphere.position.set(...uniforms.sphere.position.data);
 
 		const lineMaterial2 = new THREE.LineBasicMaterial({ color: 0x00FF00 });
 		const lineGeometry2 = new THREE.BufferGeometry();
@@ -59,8 +58,7 @@ export default function Sphere() {
 		];
 
 		const light = new THREE.DirectionalLight(0xffffff, 3);
-		const lightPosition = uniforms.lightSphere.position.data;
-		light.position.set(lightPosition[0], lightPosition[1], lightPosition[2]);
+		light.position.set(...uniforms.lightSphere.position.data);
 
 		const { width, height } = mainCanvas;
 
@@ -149,16 +147,18 @@ export default function Sphere() {
 						cameraPerspective.updateProjectionMatrix();
 						if (material.map) {
 							material.map.needsUpdate = true;
-							render(time, (device, { uniformBuffer, uniformValues }, key) => {
+							render(
+								time,
+								['sphere', 'lightSphere', 'iMouse'],
+								(device, { uniformName, uniformBuffer, uniformValues }) => {
 								//for each uniform
-								const uniform = uniforms[key];
-								if (key === 'sphere') {
+								const uniform = uniforms[uniformName];
+								if (uniformName === 'sphere') {
 									//sphere
 									const spherePosition = uniform.position.data;
 									spherePosition[0] = Math.cos(time);
 									spherePosition[1] = -Math.sin(time);
-									light.position.set(spherePosition[0], spherePosition[1]);
-
+									sphere.position.set(spherePosition[0], spherePosition[1]);
 									uniformValues.set(
 										[
 											...spherePosition,
@@ -168,7 +168,7 @@ export default function Sphere() {
 										], 0);
 									device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
 								}
-								if (key === 'lightSphere') {
+								if (uniformName === 'lightSphere') {
 									//light sphere
 									const lightPosition = uniform.position.data;
 									lightPosition[0] = 2.0 * Math.cos(time);
@@ -184,7 +184,7 @@ export default function Sphere() {
 									device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
 								}
 
-								if (key === 'iMouse') {
+								if (uniformName === 'iMouse') {
 									uniformValues.set(uniform.data, 0);
 									device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
 								}

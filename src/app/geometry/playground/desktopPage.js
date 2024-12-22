@@ -1,4 +1,3 @@
-import React from 'react';
 import Playground from '@/components/Scenes/Playground/Playground';
 import Link from 'next/link';
 

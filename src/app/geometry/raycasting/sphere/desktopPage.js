@@ -1,4 +1,3 @@
-import React from 'react';
 import Sphere from '@/components/Scenes/RayCasting/Sphere/Sphere';
 import Link from 'next/link';
 
