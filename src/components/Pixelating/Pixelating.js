@@ -1,5 +1,9 @@
 export default class Pixelating {
-	initialize(canvas, resolution, shader) {
+	constructor(resolutions) {
+		this.resolutions = resolutions;
+	}
+
+	initialize = function(canvas, shader, startResolutionIndex) {
 		return new Promise(async (resolve, reject) => {
 			const adapter = await navigator.gpu?.requestAdapter();
 			const device = await adapter?.requestDevice();
@@ -69,6 +73,7 @@ export default class Pixelating {
 						uniformBuffer,
 						uniformValues,
 					};
+					device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
 					return resultObj;
 				}, {});
 
@@ -85,13 +90,17 @@ export default class Pixelating {
 			};
 			const { objectInfos, bindGroup } = setUniforms({
 				...shader.uniforms,
+				iMouse: {
+					bufferSize: 8,
+					data: [-999, -999],
+				},
 				iScaleWidth: {
 					bufferSize: 4,
-					data: [resolution.width],
+					data: [this.resolutions[startResolutionIndex].width],
 				},
 				iScaleHeight: {
 					bufferSize: 4,
-					data: [resolution.height],
+					data: [this.resolutions[startResolutionIndex].height],
 				},
 			});
 
@@ -107,19 +116,12 @@ export default class Pixelating {
 				],
 			};
 
-			const render = function(time, uniNamesForChange, callback) {
+			const render = function() {
 				renderPassDescriptor.colorAttachments[0].view =
 					context.getCurrentTexture().createView();
 				const encoder = device.createCommandEncoder({ label: 'our encoder' });
 				const pass = encoder.beginRenderPass(renderPassDescriptor);
 				pass.setPipeline(pipeline);
-				Object.keys(objectInfos).forEach((key) => {
-					if (uniNamesForChange.includes(key)) {
-						callback(device, objectInfos[key]);
-					} else {
-						device.queue.writeBuffer(objectInfos[key].uniformBuffer, 0, objectInfos[key].uniformValues);
-					}
-				});
 				pass.setBindGroup(0, bindGroup);
 				pass.draw(6);  // call our vertex shader 3 times
 				pass.end();
@@ -127,24 +129,21 @@ export default class Pixelating {
 				device.queue.submit([commandBuffer]);
 			};
 
-			const changeResolution = (resolution) => {
-				objectInfos.iScaleWidth.uniformValues.set([resolution.width], 0);
+			const changeResolution = (resolutionIndex) => {
+				const newResolution = this.resolutions[resolutionIndex];
+				objectInfos.iScaleWidth.uniformValues.set([newResolution.width], 0);
 				device.queue.writeBuffer(objectInfos.iScaleWidth.uniformBuffer, 0,
 					objectInfos.iScaleWidth.uniformValues);
 
-				objectInfos.iScaleHeight.uniformValues.set([resolution.height], 0);
+				objectInfos.iScaleHeight.uniformValues.set([newResolution.height], 0);
 				device.queue.writeBuffer(objectInfos.iScaleHeight.uniformBuffer, 0,
 					objectInfos.iScaleHeight.uniformValues);
 
-				Object.assign(context.canvas, resolution);
-				this.resolution = resolution;
+				Object.assign(context.canvas, newResolution);
+				this.resolution = newResolution;
 			};
-			changeResolution(resolution);
-
-			resolve({
-				render,
-				changeResolution,
-			});
+			changeResolution(startResolutionIndex);
+			resolve({ device, objectInfos, changeResolution, render });
 		});
-	}
+	};
 }

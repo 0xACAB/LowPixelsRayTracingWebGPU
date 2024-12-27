@@ -44,9 +44,5 @@ export default {
 				data: [1.0, 1.0, 1.0],
 			},
 		},
-	},
-	iMouse: {
-		bufferSize: 8,
-		data: [-999.0, -999.0],
-	},
+	}
 };

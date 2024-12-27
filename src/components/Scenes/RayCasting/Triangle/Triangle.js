@@ -14,6 +14,7 @@ export default function Triangle() {
 	const mainCanvasRef = useRef(null);
 	const pixelatingCanvasRef = useRef(null);
 	const sliderRef = useRef(null);
+
 	const resolutions = [
 		{ width: 8, height: 8 },
 		{ width: 16, height: 16 },
@@ -23,7 +24,8 @@ export default function Triangle() {
 		{ width: 256, height: 256 },
 		{ width: 512, height: 512 },
 	];
-	const [resolutionIndex, setResolutionIndex] = useState(3);
+	const startResolutionIndex = 3;
+	const [resolutionIndex, setResolutionIndex] = useState(startResolutionIndex);
 	useEffect(() => {
 		const mainCanvas = mainCanvasRef.current;
 		const pixelatingCanvas = pixelatingCanvasRef.current;
@@ -88,21 +90,19 @@ export default function Triangle() {
 		const renderer = new THREE.WebGLRenderer({ canvas: mainCanvas });
 		renderer.setSize(width, height);
 
-		//Create controller for plane CanvasTexture
-		const pixelating = new Pixelating();
-		pixelating
-			.initialize(
-				pixelatingCanvas,
-				resolutions[resolutionIndex],
-				{ code: shaderCode, uniforms },
-			)
-			.then(({ render, changeResolution }) => {
+		//Create controller for hidden canvas
+		const pixelating = new Pixelating(resolutions);
+		pixelating.initialize(pixelatingCanvas, { code: shaderCode, uniforms }, startResolutionIndex)
+			.then(({ device, objectInfos, changeResolution, render }) => {
 					slider.addEventListener('input', (event) => {
 						material.map.dispose();
+
+						objectInfos.iMouse.uniformValues.set([-999, -999], 0);
+						device.queue.writeBuffer(objectInfos.iMouse.uniformBuffer, 0, objectInfos.iMouse.uniformValues);
+
 						const newResolutionIndex = event.target.valueAsNumber;
-						changeResolution(resolutions[newResolutionIndex]);
+						changeResolution(newResolutionIndex);
 						setResolutionIndex(newResolutionIndex);
-						uniforms.iMouse.data = [-999, -999];
 					});
 					const pointerDown = (event) => {
 						// calculate pointer position in normalized device coordinates
@@ -116,10 +116,12 @@ export default function Triangle() {
 						const uv = intersects[0]?.uv;
 						if (uv) {
 							const { width, height } = pixelating.resolution;
-							uniforms.iMouse.data = [
+
+							objectInfos.iMouse.uniformValues.set([
 								Math.floor((uv.x - 0.5) * width),
 								Math.floor((uv.y - 0.5) * height),
-							];
+							], 0);
+							device.queue.writeBuffer(objectInfos.iMouse.uniformBuffer, 0, objectInfos.iMouse.uniformValues);
 
 							const xFloored = Math.floor((uv.x - 0.5) * width) / width;
 							const yFloored = Math.floor((uv.y - 0.5) * height) / height;
@@ -133,7 +135,6 @@ export default function Triangle() {
 							);
 							lineGeometry2.setFromPoints(pointsL2);
 						}
-
 					};
 					mainCanvas.addEventListener('pointerdown', pointerDown);
 					//group.rotation.y = Math.PI / 4;
@@ -148,35 +149,22 @@ export default function Triangle() {
 						cameraPerspective.updateProjectionMatrix();
 						if (material.map) {
 							material.map.needsUpdate = true;
-							render(
-								time,
-								['triangle0', 'iMouse'],
-								(device, { uniformName, uniformBuffer, uniformValues }) => {
-									//for all second param uniforms
-									const uniform = uniforms[uniformName];
-									if (uniformName === 'triangle0') {
-										//triangle
-										uniformValues.set(
-											[
-												...uniform.points.data.reduce((prev, value, index) => {
-													prev.push(value);
-													if (index % 3 === 2) {
-														//add offset for 16 bytes bufferSize for vec3f
-														prev.push(0);
-													}
-													return prev;
-												}, []),
-												...uniform.color.data, 0,
-												...uniform.material.Kd.data, 0,
-												...uniform.material.Ke.data, 0,
-											], 0);
-										device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
-									}
-									if (uniformName === 'iMouse') {
-										uniformValues.set(uniform.data, 0);
-										device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
-									}
-								});
+							objectInfos.triangle0.uniformValues.set(
+								[
+									...uniforms.triangle0.points.data.reduce((prev, value, index) => {
+										prev.push(value);
+										if (index % 3 === 2) {
+											//add offset for 16 bytes bufferSize for vec3f
+											prev.push(0);
+										}
+										return prev;
+									}, []),
+									...uniforms.triangle0.color.data, 0,
+									...uniforms.triangle0.material.Kd.data, 0,
+									...uniforms.triangle0.material.Ke.data, 0,
+								], 0);
+							device.queue.writeBuffer(objectInfos.triangle0.uniformBuffer, 0, objectInfos.triangle0.uniformValues);
+							render();
 						}
 						renderer.render(scene, camera);
 						stats.update();

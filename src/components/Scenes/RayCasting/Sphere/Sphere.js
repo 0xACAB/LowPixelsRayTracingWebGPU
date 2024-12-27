@@ -14,6 +14,7 @@ export default function Sphere() {
 	const mainCanvasRef = useRef(null);
 	const pixelatingCanvasRef = useRef(null);
 	const sliderRef = useRef(null);
+
 	const resolutions = [
 		{ width: 8, height: 8 },
 		{ width: 16, height: 16 },
@@ -23,7 +24,8 @@ export default function Sphere() {
 		{ width: 256, height: 256 },
 		{ width: 512, height: 512 },
 	];
-	const [resolutionIndex, setResolutionIndex] = useState(3);
+	const startResolutionIndex = 3;
+	const [resolutionIndex, setResolutionIndex] = useState(startResolutionIndex);
 	useEffect(() => {
 		const mainCanvas = mainCanvasRef.current;
 		const pixelatingCanvas = pixelatingCanvasRef.current;
@@ -87,21 +89,19 @@ export default function Sphere() {
 		const renderer = new THREE.WebGLRenderer({ canvas: mainCanvas });
 		renderer.setSize(width, height);
 
-		//Create controller for plane CanvasTexture
-		const pixelating = new Pixelating();
-		pixelating
-			.initialize(
-				pixelatingCanvas,
-				resolutions[resolutionIndex],
-				{ code: shaderCode, uniforms },
-			)
-			.then(({ render, changeResolution }) => {
+		//Create controller for hidden canvas
+		const pixelating = new Pixelating(resolutions);
+		pixelating.initialize(pixelatingCanvas, { code: shaderCode, uniforms }, startResolutionIndex)
+			.then(({ device, objectInfos, changeResolution, render }) => {
 					slider.addEventListener('input', (event) => {
 						material.map.dispose();
+
+						objectInfos.iMouse.uniformValues.set([-999, -999], 0);
+						device.queue.writeBuffer(objectInfos.iMouse.uniformBuffer, 0, objectInfos.iMouse.uniformValues);
+
 						const newResolutionIndex = event.target.valueAsNumber;
-						changeResolution(resolutions[newResolutionIndex]);
+						changeResolution(newResolutionIndex);
 						setResolutionIndex(newResolutionIndex);
-						uniforms.iMouse.data = [-999, -999];
 					});
 					const pointerDown = (event) => {
 						// calculate pointer position in normalized device coordinates
@@ -115,10 +115,12 @@ export default function Sphere() {
 						const uv = intersects[0]?.uv;
 						if (uv) {
 							const { width, height } = pixelating.resolution;
-							uniforms.iMouse.data = [
+
+							objectInfos.iMouse.uniformValues.set([
 								Math.floor((uv.x - 0.5) * width),
 								Math.floor((uv.y - 0.5) * height),
-							];
+							], 0);
+							device.queue.writeBuffer(objectInfos.iMouse.uniformBuffer, 0, objectInfos.iMouse.uniformValues);
 
 							const xFloored = Math.floor((uv.x - 0.5) * width) / width;
 							const yFloored = Math.floor((uv.y - 0.5) * height) / height;
@@ -132,7 +134,6 @@ export default function Sphere() {
 							);
 							lineGeometry2.setFromPoints(pointsL2);
 						}
-
 					};
 					mainCanvas.addEventListener('pointerdown', pointerDown);
 					//group.rotation.y = Math.PI / 4;
@@ -147,48 +148,32 @@ export default function Sphere() {
 						cameraPerspective.updateProjectionMatrix();
 						if (material.map) {
 							material.map.needsUpdate = true;
-							render(
-								time,
-								['sphere', 'lightSphere', 'iMouse'],
-								(device, { uniformName, uniformBuffer, uniformValues }) => {
-								//for each uniform
-								const uniform = uniforms[uniformName];
-								if (uniformName === 'sphere') {
-									//sphere
-									const spherePosition = uniform.position.data;
-									spherePosition[0] = Math.cos(time);
-									spherePosition[1] = -Math.sin(time);
-									sphere.position.set(spherePosition[0], spherePosition[1]);
-									uniformValues.set(
-										[
-											...spherePosition,
-											uniform.radius.data[0],
-											...uniform.material.Kd.data, 0,
-											...uniform.material.Ke.data, 0,
-										], 0);
-									device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
-								}
-								if (uniformName === 'lightSphere') {
-									//light sphere
-									const lightPosition = uniform.position.data;
-									lightPosition[0] = 2.0 * Math.cos(time);
-									lightPosition[1] = 2.0 * Math.sin(time);
-									light.position.set(lightPosition[0], lightPosition[1]);
-									uniformValues.set(
-										[
-											...lightPosition,
-											uniform.radius.data[0],
-											...uniform.material.Kd.data, 0,
-											...uniform.material.Ke.data, 0,
-										], 0);
-									device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
-								}
+							sphere.position.set(Math.cos(time), -Math.sin(time));
+							light.position.set(2.0 * Math.cos(time), 2.0 * Math.sin(time));
 
-								if (uniformName === 'iMouse') {
-									uniformValues.set(uniform.data, 0);
-									device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
-								}
+							objectInfos.sphere.uniformValues.set(
+								[
+									sphere.position.x, sphere.position.y, sphere.position.z,
+									sphere.geometry.parameters.radius,
+									...uniforms.sphere.material.Kd.data, 0,
+									...uniforms.sphere.material.Ke.data, 0,
+								], 0);
+							objectInfos.lightSphere.uniformValues.set(
+								[
+									light.position.x, light.position.y, light.position.z,
+									uniforms.lightSphere.radius.data[0],
+									...uniforms.lightSphere.material.Kd.data, 0,
+									...uniforms.lightSphere.material.Ke.data, 0,
+								], 0);
+
+							[
+								objectInfos.sphere,
+								objectInfos.lightSphere,
+							].forEach(({ uniformBuffer, uniformValues }) => {
+								device.queue.writeBuffer(uniformBuffer, 0, uniformValues);
 							});
+
+							render();
 						}
 						renderer.render(scene, camera);
 						stats.update();
